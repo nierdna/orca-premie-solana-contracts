@@ -1,0 +1,17 @@
+# Solana Development Context
+When working with Solana/Anchor code, please reference the best practices and patterns from `solana_program_guide_with_expert_notes.md`.
+
+Key guidelines:
+- Follow security checklist in section 12
+- Use PDA patterns from section 2  
+- Apply performance optimization from section 3
+- Follow architecture structure from section 6
+- Use proper error handling with Result<()>
+- Always validate authorities and account constraints
+
+For code generation, prioritize:
+- Security-first approach
+- Clear account validation
+- Proper constraint usage (#[account(...)])
+- Meaningful error messages
+- Clean separation of **concerns**
