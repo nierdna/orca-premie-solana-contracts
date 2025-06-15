@@ -1,7 +1,7 @@
 # Solana Development Context
 When working with Solana/Anchor code, please reference the best practices and patterns from `solana_program_guide_with_expert_notes.md`.
 
-Key guidelines:
+## 🔧 General Guidelines:
 - Follow security checklist in section 12
 - Use PDA patterns from section 2  
 - Apply performance optimization from section 3
@@ -14,4 +14,75 @@ For code generation, prioritize:
 - Clear account validation
 - Proper constraint usage (#[account(...)])
 - Meaningful error messages
-- Clean separation of **concerns**
+- Clean separation of concerns
+
+---
+
+# 🏛️ Premarket Trading System - Solana Implementation Context
+Reference the complete business logic specification from `SOLANA_BUSINESS_LOGIC_REQUIREMENTS.md`.
+
+## 🏗️ Architecture Overview
+- **2-Program Architecture**: EscrowVault + PreMarketTrade (mirrors EVM design)
+- **EscrowVault Program**: Pure asset custody and balance management
+- **PreMarketTrade Program**: Trading logic and order management  
+- **Cross-Program Integration**: CPI calls from Trading → Vault
+
+## 🎯 Key Implementation Guidelines
+
+### Program Structure:
+- Follow exact struct definitions from business requirements
+- Use user-controlled keypairs for TokenMarket and TradeRecord (not PDAs)
+- Implement all error types as specified
+- Use exact account size constants for rent calculation
+
+### Security Requirements:
+- Always validate program ownership: `constraint = account.owner == &crate::ID`
+- Implement CPI authorization checks
+- Use safe math for all economic calculations
+- Validate signatures with ed25519_verify
+
+### Business Logic:
+- **Balance Management**: `slash_balance()` = subtract (lock), `credit_balance()` = add (unlock)
+- **Settlement**: Use `transfer_out()` to external wallets (NOT credit_balance)
+- **Economic Model**: Exact EVM mapping - buyer/seller collateral, rewards, penalties
+- **Partial Fills**: Support with OrderStatus tracking
+
+### Cross-Program Patterns:
+```rust
+// CPI pattern for collateral locking
+let slash_cpi = CpiContext::new(
+    ctx.accounts.vault_program.to_account_info(),
+    vault_program::cpi::accounts::SlashBalance { ... }
+);
+vault_program::cpi::slash_balance(slash_cpi, amount)?;
+```
+
+### Account Patterns:
+- **PDAs**: VaultConfig, UserBalance, VaultAuthority, TradeConfig, OrderStatus
+- **User-Controlled**: TokenMarket, TradeRecord (generated keypairs)
+- **Seeds**: Use constants like `b"vault_config"`, `b"user_balance"`
+
+### Constants to Use:
+```rust
+pub const VAULT_PROGRAM_ID: Pubkey = pubkey!("VaultProgramID111111111111111111111111111111");
+pub const TRADING_PROGRAM_ID: Pubkey = pubkey!("TradeProgramID111111111111111111111111111111");
+pub const USDC_MINT: Pubkey = pubkey!("EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v");
+pub const PRICE_SCALE: u64 = 1_000_000; // 6 decimals
+```
+
+### Error Handling:
+- Implement all error types from TradingError and VaultError enums
+- Use meaningful error messages
+- Handle CPI errors gracefully
+
+### Event Emission:
+- Emit events for all major operations
+- Use EVM-compatible naming (token_id, trade_id = account addresses)
+
+## 🚀 Development Priority:
+1. **Phase 1**: Vault Program Foundation ✅
+2. **Phase 2**: Trading Program Core  
+3. **Phase 3**: Cross-Program Integration
+4. **Phase 4**: Business Logic Implementation
+
+Always reference the complete specifications in `SOLANA_BUSINESS_LOGIC_REQUIREMENTS.md` for detailed implementation requirements.
