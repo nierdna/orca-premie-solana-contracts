@@ -1,16 +1,23 @@
 [features]
-seeds = false
+resolution = true
 skip-lint = false
 
-[programs.localnet]
+[programs.devnet]
+escrow_vault = "CD7jsdpT5SrVAb72Z3PzbdsU1mmUnFfhdecq7dMrJFDw"
+premarket_trade = "GE5w5w7JoFpWMvKHwz7Bc7H5CwMspB9SG3WyyFRed3Ua"
+user_profile = "11111111111111111111111111111112"
+
+[programs.testnet]
+escrow_vault = "CD7jsdpT5SrVAb72Z3PzbdsU1mmUnFfhdecq7dMrJFDw"
+premarket_trade = "GE5w5w7JoFpWMvKHwz7Bc7H5CwMspB9SG3WyyFRed3Ua"
 user_profile = "11111111111111111111111111111112"
 
 [registry]
 url = "https://api.apr.dev"
 
 [provider]
-cluster = "Localnet"
-wallet = "~/.config/solana/id.json"
+cluster = "devnet"
+wallet = "/Users/andrein/.config/solana/deployer.json"
 
 [scripts]
-test = "yarn run ts-mocha -p ./tsconfig.json -t 1000000 tests/**/*.ts" 
+test = "yarn run ts-mocha -p ./tsconfig.json -t 1000000 tests/**/*.ts"

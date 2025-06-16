@@ -38,7 +38,7 @@ use crate::state::*;
 use crate::error::TradingError;
 use crate::events::OrderCancelled;
 use crate::utils::{verify_order_signature, calculate_order_hash};
-use shared::PreOrder;
+use crate::common::PreOrder;
 
 // Import vault program for CPI calls
 use escrow_vault::cpi;
@@ -58,14 +58,14 @@ pub struct CancelOrder<'info> {
         ],
         bump,
     )]
-    pub order_status: Account<'info, OrderStatus>,
+    pub order_status: Box<Account<'info, OrderStatus>>,
     
     /// TokenMarket for the order (validation)
     #[account(
         constraint = token_market.to_account_info().owner == &crate::ID @ TradingError::InvalidAccountOwner,
         constraint = token_market.token_id == order.token_id @ TradingError::TokenMintMismatch,
     )]
-    pub token_market: Account<'info, TokenMarket>,
+    pub token_market: Box<Account<'info, TokenMarket>>,
     
     /// Trade configuration PDA for economic parameters
     #[account(
@@ -73,7 +73,7 @@ pub struct CancelOrder<'info> {
         bump = config.bump,
         constraint = !config.paused @ TradingError::TradingPaused,
     )]
-    pub config: Account<'info, TradeConfig>,
+    pub config: Box<Account<'info, TradeConfig>>,
     
     /// Trader signer (must match order.trader)
     #[account(
@@ -95,7 +95,7 @@ pub struct CancelOrder<'info> {
         bump,
         seeds::program = vault_program.key(),
     )]
-    pub vault_config: Account<'info, escrow_vault::state::VaultConfig>,
+    pub vault_config: Box<Account<'info, escrow_vault::state::VaultConfig>>,
     
     /// Trader balance PDA for collateral unlock
     /// CHECK: Trader balance account validated via CPI to vault program
@@ -110,14 +110,14 @@ pub struct CancelOrder<'info> {
         bump,
         seeds::program = vault_program.key(),
     )]
-    pub vault_authority: Account<'info, escrow_vault::state::VaultAuthority>,
+    pub vault_authority: Box<Account<'info, escrow_vault::state::VaultAuthority>>,
     
     /// Trader ATA for validation (not used for transfer)
     #[account(
         constraint = trader_collateral_ata.owner == trader.key() @ TradingError::InvalidAccountOwner,
         constraint = trader_collateral_ata.mint == order.collateral_token @ TradingError::TokenMintMismatch,
     )]
-    pub trader_collateral_ata: Account<'info, TokenAccount>,
+    pub trader_collateral_ata: Box<Account<'info, TokenAccount>>,
     
     pub token_program: Program<'info, Token>,
     pub system_program: Program<'info, System>,
@@ -228,13 +228,13 @@ fn calculate_order_collateral(
     amount: u64,
     price: u64,
     is_buy: bool,
-    economic_config: &shared::EconomicConfig,
+    economic_config: &crate::common::EconomicConfig,
 ) -> Result<u64> {
     // Calculate trade value
     let trade_value = amount
         .checked_mul(price)
         .ok_or(TradingError::MathOverflow)?
-        .checked_div(shared::PRICE_SCALE)
+        .checked_div(crate::common::PRICE_SCALE)
         .ok_or(TradingError::MathOverflow)?;
     
     // Get appropriate collateral ratio

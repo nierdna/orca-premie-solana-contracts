@@ -17,6 +17,6 @@ default = []
 
 [dependencies]
 anchor-lang = { version = "0.29.0", features = ["init-if-needed"] }
-anchor-spl = "0.29.0"
+anchor-spl = { version = "0.29.0", default-features = false, features = ["token"] }
 solana-program = { workspace = true }
-shared = { path = "../shared" } 
+ 

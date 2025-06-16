@@ -11,8 +11,8 @@ pub struct CreateTokenMarket<'info> {
     #[account(
         mut,
         constraint = token_market.to_account_info().owner == &crate::ID @ TradingError::InvalidAccountOwner,
-        constraint = symbol.len() <= shared::MAX_SYMBOL_LENGTH @ TradingError::SymbolTooLong,
-        constraint = name.len() <= shared::MAX_NAME_LENGTH @ TradingError::NameTooLong,
+        constraint = symbol.len() <= crate::common::MAX_SYMBOL_LENGTH @ TradingError::SymbolTooLong,
+        constraint = name.len() <= crate::common::MAX_NAME_LENGTH @ TradingError::NameTooLong,
         constraint = settle_time_limit >= 3600 @ TradingError::InvalidSettleTime,
         constraint = settle_time_limit <= 2592000 @ TradingError::InvalidSettleTime,
     )]

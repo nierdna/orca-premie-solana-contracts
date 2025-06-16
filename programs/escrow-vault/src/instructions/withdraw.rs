@@ -13,7 +13,7 @@ pub struct WithdrawCollateral<'info> {
         bump = config.bump,
         constraint = !config.paused @ VaultError::VaultPaused,
     )]
-    pub config: Account<'info, VaultConfig>,
+    pub config: Box<Account<'info, VaultConfig>>,
     
     #[account(
         mut,
@@ -26,7 +26,7 @@ pub struct WithdrawCollateral<'info> {
         constraint = user_balance.user == user.key() @ VaultError::InvalidAccountOwner,
         constraint = user_balance.balance >= amount @ VaultError::InsufficientBalance,
     )]
-    pub user_balance: Account<'info, UserBalance>,
+    pub user_balance: Box<Account<'info, UserBalance>>,
     
     #[account(
         mut,
@@ -37,21 +37,21 @@ pub struct WithdrawCollateral<'info> {
         bump = vault_authority.bump,
         constraint = vault_authority.token_mint == user_balance.token_mint @ VaultError::InvalidTokenMint,
     )]
-    pub vault_authority: Account<'info, VaultAuthority>,
+    pub vault_authority: Box<Account<'info, VaultAuthority>>,
     
     #[account(
         mut,
         constraint = vault_ata.key() == vault_authority.vault_ata @ VaultError::InvalidTokenMint,
         constraint = vault_ata.mint == user_balance.token_mint @ VaultError::InvalidTokenMint,
     )]
-    pub vault_ata: Account<'info, TokenAccount>,
+    pub vault_ata: Box<Account<'info, TokenAccount>>,
     
     #[account(
         mut,
         constraint = user_ata.mint == user_balance.token_mint @ VaultError::InvalidTokenMint,
         constraint = user_ata.owner == user.key() @ VaultError::InvalidAccountOwner,
     )]
-    pub user_ata: Account<'info, TokenAccount>,
+    pub user_ata: Box<Account<'info, TokenAccount>>,
     
     #[account(mut)]
     pub user: Signer<'info>,

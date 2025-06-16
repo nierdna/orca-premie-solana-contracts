@@ -1,5 +1,5 @@
 use anchor_lang::prelude::*;
-use shared::{PreOrder, create_order_message};
+use crate::common::{PreOrder, create_order_message};
 use crate::error::TradingError;
 
 /// Verify order signature using ed25519
@@ -33,8 +33,8 @@ pub fn validate_order_deadline(deadline: i64) -> Result<()> {
 /// Validate order amounts
 pub fn validate_order_amounts(amount: u64, price: u64) -> Result<()> {
     require!(amount > 0, TradingError::ZeroAmount);
-    require!(price >= shared::MIN_PRICE, TradingError::PriceTooLow);
-    require!(price <= shared::MAX_PRICE, TradingError::PriceTooHigh);
+    require!(price >= crate::common::MIN_PRICE, TradingError::PriceTooLow);
+    require!(price <= crate::common::MAX_PRICE, TradingError::PriceTooHigh);
     Ok(())
 }
 

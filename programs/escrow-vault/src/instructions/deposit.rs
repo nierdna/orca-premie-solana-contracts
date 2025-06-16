@@ -1,6 +1,6 @@
 use anchor_lang::prelude::*;
 use anchor_spl::token::{self, Token, TokenAccount, Transfer};
-use anchor_spl::associated_token::AssociatedToken;
+// AssociatedToken import removed for size optimization
 use crate::state::*;
 use crate::error::VaultError;
 use crate::events::*;
@@ -14,7 +14,7 @@ pub struct DepositCollateral<'info> {
         bump = config.bump,
         constraint = !config.paused @ VaultError::VaultPaused,
     )]
-    pub config: Account<'info, VaultConfig>,
+    pub config: Box<Account<'info, VaultConfig>>,
     
     #[account(
         init_if_needed,
@@ -27,7 +27,7 @@ pub struct DepositCollateral<'info> {
         ],
         bump,
     )]
-    pub user_balance: Account<'info, UserBalance>,
+    pub user_balance: Box<Account<'info, UserBalance>>,
     
     #[account(
         init_if_needed,
@@ -39,15 +39,14 @@ pub struct DepositCollateral<'info> {
         ],
         bump,
     )]
-    pub vault_authority: Account<'info, VaultAuthority>,
+    pub vault_authority: Box<Account<'info, VaultAuthority>>,
     
     #[account(
-        init_if_needed,
-        payer = user,
-        associated_token::mint = token_mint,
-        associated_token::authority = vault_authority,
+        mut,
+        constraint = vault_ata.mint == token_mint.key() @ VaultError::InvalidTokenMint,
+        constraint = vault_ata.owner == vault_authority.key() @ VaultError::InvalidAccountOwner,
     )]
-    pub vault_ata: Account<'info, TokenAccount>,
+    pub vault_ata: Box<Account<'info, TokenAccount>>,
     
     #[account(
         mut,
@@ -55,16 +54,17 @@ pub struct DepositCollateral<'info> {
         constraint = user_ata.owner == user.key() @ VaultError::InvalidAccountOwner,
         constraint = user_ata.amount >= amount @ VaultError::InsufficientBalance,
     )]
-    pub user_ata: Account<'info, TokenAccount>,
+    pub user_ata: Box<Account<'info, TokenAccount>>,
     
     /// Token mint being deposited (ANY TOKEN SUPPORTED)
-    pub token_mint: Account<'info, anchor_spl::token::Mint>,
+    /// CHECK: Token mint validation is done through user_ata.mint constraint
+    #[account(address = user_ata.mint)]
+    pub token_mint: UncheckedAccount<'info>,
     
     #[account(mut)]
     pub user: Signer<'info>,
     
     pub token_program: Program<'info, Token>,
-    pub associated_token_program: Program<'info, AssociatedToken>,
     pub system_program: Program<'info, System>,
 }
 

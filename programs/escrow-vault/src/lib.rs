@@ -1,7 +1,7 @@
 use anchor_lang::prelude::*;
 
 // Program ID - sử dụng placeholder hợp lệ
-declare_id!("11111111111111111111111111111112");
+declare_id!("CD7jsdpT5SrVAb72Z3PzbdsU1mmUnFfhdecq7dMrJFDw");
 
 pub mod instructions;
 pub mod state;

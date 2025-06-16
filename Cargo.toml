@@ -1,8 +1,9 @@
 [workspace]
+resolver = "2"
 members = [
     "programs/escrow-vault",
     "programs/premarket-trade",
-    "programs/shared"
+    "programs/user-profile"
 ]
 
 [workspace.dependencies]
@@ -13,7 +14,10 @@ solana-program = "1.17"
 [profile.release]
 overflow-checks = true
 lto = "fat"
+strip = true          # Remove debug symbols
+panic = "abort"       # Smaller panic handling  
 codegen-units = 1
+opt-level = "z"       # Optimize for size instead of speed
 
 [profile.release.build-override]
 opt-level = 3

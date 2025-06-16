@@ -1,6 +1,6 @@
 use anchor_lang::prelude::*;
 use anchor_spl::token::{Token, TokenAccount};
-use shared::PreOrder;
+use crate::common::PreOrder;
 use crate::state::*;
 use crate::error::TradingError;
 use crate::events::OrdersMatched;
@@ -197,12 +197,12 @@ pub fn handler(
 fn calculate_collateral_requirements(
     amount: u64,
     price: u64,
-    economic_config: &shared::EconomicConfig,
+    economic_config: &crate::common::EconomicConfig,
 ) -> Result<(u64, u64)> {
     let trade_value = amount
         .checked_mul(price)
         .ok_or(TradingError::MathOverflow)?
-        .checked_div(shared::PRICE_SCALE)
+        .checked_div(crate::common::PRICE_SCALE)
         .ok_or(TradingError::MathOverflow)?;
     
     let buyer_collateral = trade_value

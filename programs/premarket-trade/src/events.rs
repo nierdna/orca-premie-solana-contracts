@@ -132,8 +132,8 @@ pub struct TradingUnpaused {
 #[event]
 pub struct EconomicConfigUpdated {
     pub admin: Pubkey,              // Admin who updated the config
-    pub old_config: shared::EconomicConfig,  // Previous configuration
-    pub new_config: shared::EconomicConfig,  // New configuration
+    pub old_config: crate::common::EconomicConfig,  // Previous configuration
+    pub new_config: crate::common::EconomicConfig,  // New configuration
     pub updated_at: i64,            // When update occurred
 }
 
@@ -141,7 +141,7 @@ pub struct EconomicConfigUpdated {
 #[event]
 pub struct TechnicalConfigUpdated {
     pub admin: Pubkey,              // Admin who updated the config
-    pub old_config: shared::TechnicalConfig, // Previous configuration
-    pub new_config: shared::TechnicalConfig, // New configuration
+    pub old_config: crate::common::TechnicalConfig, // Previous configuration
+    pub new_config: crate::common::TechnicalConfig, // New configuration
     pub updated_at: i64,            // When update occurred
 } 

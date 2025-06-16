@@ -15,7 +15,7 @@ pub struct TransferOut<'info> {
         constraint = config.is_authorized_trader(&crate::id()) @ VaultError::UnauthorizedTrader,
         constraint = !config.paused @ VaultError::VaultPaused,
     )]
-    pub config: Account<'info, VaultConfig>,
+    pub config: Box<Account<'info, VaultConfig>>,
     
     #[account(
         mut,
@@ -27,7 +27,7 @@ pub struct TransferOut<'info> {
         bump = user_balance.bump,
         constraint = user_balance.balance >= amount @ VaultError::InsufficientBalance,
     )]
-    pub user_balance: Account<'info, UserBalance>,
+    pub user_balance: Box<Account<'info, UserBalance>>,
     
     #[account(
         mut,
@@ -38,21 +38,21 @@ pub struct TransferOut<'info> {
         bump = vault_authority.bump,
         constraint = vault_authority.token_mint == user_balance.token_mint @ VaultError::InvalidTokenMint,
     )]
-    pub vault_authority: Account<'info, VaultAuthority>,
+    pub vault_authority: Box<Account<'info, VaultAuthority>>,
     
     #[account(
         mut,
         constraint = vault_ata.key() == vault_authority.vault_ata @ VaultError::InvalidTokenMint,
         constraint = vault_ata.mint == user_balance.token_mint @ VaultError::InvalidTokenMint,
     )]
-    pub vault_ata: Account<'info, TokenAccount>,
+    pub vault_ata: Box<Account<'info, TokenAccount>>,
     
     #[account(
         mut,
         constraint = recipient_ata.mint == user_balance.token_mint @ VaultError::InvalidTokenMint,
         constraint = recipient_ata.owner == recipient @ VaultError::InvalidAccountOwner,
     )]
-    pub recipient_ata: Account<'info, TokenAccount>,
+    pub recipient_ata: Box<Account<'info, TokenAccount>>,
     
     pub token_program: Program<'info, Token>,
 }

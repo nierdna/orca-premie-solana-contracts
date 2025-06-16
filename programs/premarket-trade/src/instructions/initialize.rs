@@ -1,6 +1,6 @@
 use anchor_lang::prelude::*;
 use crate::state::*;
-use shared::{EconomicConfig, TechnicalConfig};
+use crate::common::{EconomicConfig, TechnicalConfig};
 
 #[derive(Accounts)]
 pub struct InitializeTrading<'info> {

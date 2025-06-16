@@ -54,7 +54,7 @@ pub struct SettleTrade<'info> {
         constraint = !trade_record.settled @ TradingError::TradeAlreadySettled,
         constraint = trade_record.seller == seller.key() @ TradingError::OnlySellerCanSettle,
     )]
-    pub trade_record: Account<'info, TradeRecord>,
+    pub trade_record: Box<Account<'info, TradeRecord>>,
     
     /// TokenMarket for the trading pair (must be mapped to real token)
     #[account(
@@ -62,7 +62,7 @@ pub struct SettleTrade<'info> {
         constraint = token_market.token_id == trade_record.token_id @ TradingError::TokenMintMismatch,
         constraint = token_market.real_mint.is_some() @ TradingError::TokenNotMapped,
     )]
-    pub token_market: Account<'info, TokenMarket>,
+    pub token_market: Box<Account<'info, TokenMarket>>,
     
     /// Trade configuration PDA for validation
     #[account(
@@ -70,7 +70,7 @@ pub struct SettleTrade<'info> {
         bump = config.bump,
         constraint = !config.paused @ TradingError::TradingPaused,
     )]
-    pub config: Account<'info, TradeConfig>,
+    pub config: Box<Account<'info, TradeConfig>>,
     
     /// Seller signer (must match trade_record.seller)
     #[account(mut)]
@@ -89,7 +89,7 @@ pub struct SettleTrade<'info> {
         bump,
         seeds::program = vault_program.key(),
     )]
-    pub vault_config: Account<'info, escrow_vault::state::VaultConfig>,
+    pub vault_config: Box<Account<'info, escrow_vault::state::VaultConfig>>,
     
     /// Seller balance PDA for collateral release
     /// CHECK: Seller balance account validated via CPI to vault program
@@ -104,13 +104,13 @@ pub struct SettleTrade<'info> {
         bump,
         seeds::program = vault_program.key(),
     )]
-    pub vault_authority: Account<'info, escrow_vault::state::VaultAuthority>,
+    pub vault_authority: Box<Account<'info, escrow_vault::state::VaultAuthority>>,
     
     /// Vault ATA for collateral token
     #[account(
         constraint = vault_ata.mint == trade_record.collateral_mint @ TradingError::TokenMintMismatch,
     )]
-    pub vault_ata: Account<'info, TokenAccount>,
+    pub vault_ata: Box<Account<'info, TokenAccount>>,
     
     /// Seller ATA for collateral release
     #[account(
@@ -234,13 +234,13 @@ fn calculate_settlement_amounts(
     filled_amount: u64,
     price: u64,
     seller_collateral: u64,
-    economic_config: &shared::EconomicConfig,
+    economic_config: &crate::common::EconomicConfig,
 ) -> Result<(u64, u64)> {
     // Calculate trade value
     let trade_value = filled_amount
         .checked_mul(price)
         .ok_or(TradingError::MathOverflow)?
-        .checked_div(shared::PRICE_SCALE)
+        .checked_div(crate::common::PRICE_SCALE)
         .ok_or(TradingError::MathOverflow)?;
     
     // Calculate seller reward (basis points)

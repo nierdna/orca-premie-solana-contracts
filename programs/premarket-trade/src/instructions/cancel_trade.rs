@@ -209,13 +209,13 @@ fn calculate_cancellation_amounts(
     price: u64,
     buyer_collateral: u64,
     seller_collateral: u64,
-    economic_config: &shared::EconomicConfig,
+    economic_config: &crate::common::EconomicConfig,
 ) -> Result<(u64, u64, u64)> {
     // Calculate trade value
     let trade_value = filled_amount
         .checked_mul(price)
         .ok_or(TradingError::MathOverflow)?
-        .checked_div(shared::PRICE_SCALE)
+        .checked_div(crate::common::PRICE_SCALE)
         .ok_or(TradingError::MathOverflow)?;
     
     // Calculate penalty amount (from seller to buyer)

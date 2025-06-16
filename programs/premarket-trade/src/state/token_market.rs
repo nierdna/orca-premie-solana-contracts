@@ -1,5 +1,5 @@
 use anchor_lang::prelude::*;
-use shared::*;
+use crate::common::{MAX_SYMBOL_LENGTH, MAX_NAME_LENGTH};
 use crate::error::TradingError;
 
 /// TokenMarket - Per-token market data (User-controlled keypair, not PDA)
@@ -66,7 +66,7 @@ impl TokenMarket {
     /// Validate symbol length
     pub fn validate_symbol(symbol: &str) -> Result<()> {
         require!(
-            symbol.len() <= shared::MAX_SYMBOL_LENGTH,
+            symbol.len() <= crate::common::MAX_SYMBOL_LENGTH,
             TradingError::SymbolTooLong
         );
         Ok(())
@@ -75,7 +75,7 @@ impl TokenMarket {
     /// Validate name length
     pub fn validate_name(name: &str) -> Result<()> {
         require!(
-            name.len() <= shared::MAX_NAME_LENGTH,
+            name.len() <= crate::common::MAX_NAME_LENGTH,
             TradingError::NameTooLong
         );
         Ok(())

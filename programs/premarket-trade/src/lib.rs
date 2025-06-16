@@ -1,19 +1,18 @@
 use anchor_lang::prelude::*;
-use anchor_spl::token::{self, Token, TokenAccount, Mint};
-use shared::{PreOrder, EconomicConfig, TechnicalConfig};
 
 // Program ID sẽ được set khi deploy
-declare_id!("11111111111111111111111111111113");
+declare_id!("GE5w5w7JoFpWMvKHwz7Bc7H5CwMspB9SG3WyyFRed3Ua");
 
+pub mod common;
 pub mod instructions;
 pub mod state;
 pub mod error;
 pub mod events;
 pub mod utils;
 
+use common::{PreOrder, EconomicConfig, TechnicalConfig};
+
 use instructions::*;
-use error::TradingError;
-use events::*;
 
 #[program]
 pub mod premarket_trade {

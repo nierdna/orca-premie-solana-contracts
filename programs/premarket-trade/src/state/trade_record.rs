@@ -1,5 +1,5 @@
 use anchor_lang::prelude::*;
-use shared::*;
+// No common imports needed for this file
 use crate::error::TradingError;
 
 /// TradeRecord - Individual trade record (User-controlled keypair, not PDA)

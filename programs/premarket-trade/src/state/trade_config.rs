@@ -1,5 +1,5 @@
 use anchor_lang::prelude::*;
-use shared::{EconomicConfig, TechnicalConfig};
+use crate::common::{EconomicConfig, TechnicalConfig};
 use crate::error::TradingError;
 
 /// TradeConfig - Global trading configuration (PDA)
@@ -77,19 +77,19 @@ impl TradeConfig {
     pub fn update_economic_config(&mut self, new_config: EconomicConfig) -> Result<()> {
         // Validate config
         require!(
-            new_config.buyer_collateral_ratio <= shared::MAX_COLLATERAL_RATIO,
+            new_config.buyer_collateral_ratio <= crate::common::MAX_COLLATERAL_RATIO,
             TradingError::InvalidCollateralRatio
         );
         require!(
-            new_config.seller_collateral_ratio <= shared::MAX_COLLATERAL_RATIO,
+            new_config.seller_collateral_ratio <= crate::common::MAX_COLLATERAL_RATIO,
             TradingError::InvalidCollateralRatio
         );
         require!(
-            new_config.seller_reward_bps <= shared::MAX_REWARD_BPS,
+            new_config.seller_reward_bps <= crate::common::MAX_REWARD_BPS,
             TradingError::InvalidRewardParameters
         );
         require!(
-            new_config.late_penalty_bps <= shared::MAX_PENALTY_BPS,
+            new_config.late_penalty_bps <= crate::common::MAX_PENALTY_BPS,
             TradingError::InvalidRewardParameters
         );
 

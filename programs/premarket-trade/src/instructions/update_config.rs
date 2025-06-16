@@ -33,7 +33,7 @@ use anchor_lang::prelude::*;
 use crate::state::*;
 use crate::error::TradingError;
 use crate::events::{EconomicConfigUpdated, TechnicalConfigUpdated};
-use shared::{EconomicConfig, TechnicalConfig};
+use crate::common::{EconomicConfig, TechnicalConfig};
 
 // Economic config update instruction
 #[derive(Accounts)]
@@ -143,23 +143,23 @@ pub fn update_technical_handler(
 fn validate_economic_config(config: &EconomicConfig) -> Result<()> {
     // Validate collateral ratios (0-200%)
     require!(
-        config.buyer_collateral_ratio <= shared::MAX_COLLATERAL_RATIO,
+        config.buyer_collateral_ratio <= crate::common::MAX_COLLATERAL_RATIO,
         TradingError::InvalidCollateralRatio
     );
     require!(
-        config.seller_collateral_ratio <= shared::MAX_COLLATERAL_RATIO,
+        config.seller_collateral_ratio <= crate::common::MAX_COLLATERAL_RATIO,
         TradingError::InvalidCollateralRatio
     );
     
     // Validate seller reward (0-10%)
     require!(
-        config.seller_reward_bps <= shared::MAX_REWARD_BPS,
+        config.seller_reward_bps <= crate::common::MAX_REWARD_BPS,
         TradingError::InvalidRewardParameters
     );
     
     // Validate late penalty (0-100%)
     require!(
-        config.late_penalty_bps <= shared::MAX_PENALTY_BPS,
+        config.late_penalty_bps <= crate::common::MAX_PENALTY_BPS,
         TradingError::InvalidRewardParameters
     );
     
