@@ -3,13 +3,13 @@ resolution = true
 skip-lint = false
 
 [programs.devnet]
-escrow_vault = "CD7jsdpT5SrVAb72Z3PzbdsU1mmUnFfhdecq7dMrJFDw"
-premarket_trade = "GE5w5w7JoFpWMvKHwz7Bc7H5CwMspB9SG3WyyFRed3Ua"
+escrow_vault = "a7GxwYc2RSZgiHc9Z8YMr82NppshTNPbqMbfSfvyroE"
+premarket_trade = "6AXDZgH6QnCwCzJZEYp7bsQrq4yxMmhLMus66zy4ZkNF"
 user_profile = "11111111111111111111111111111112"
 
 [programs.testnet]
-escrow_vault = "CD7jsdpT5SrVAb72Z3PzbdsU1mmUnFfhdecq7dMrJFDw"
-premarket_trade = "GE5w5w7JoFpWMvKHwz7Bc7H5CwMspB9SG3WyyFRed3Ua"
+escrow_vault = "a7GxwYc2RSZgiHc9Z8YMr82NppshTNPbqMbfSfvyroE"
+premarket_trade = "6AXDZgH6QnCwCzJZEYp7bsQrq4yxMmhLMus66zy4ZkNF"
 user_profile = "11111111111111111111111111111112"
 
 [registry]

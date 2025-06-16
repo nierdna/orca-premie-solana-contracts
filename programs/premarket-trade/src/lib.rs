@@ -1,7 +1,7 @@
 use anchor_lang::prelude::*;
 
 // Program ID sẽ được set khi deploy
-declare_id!("GE5w5w7JoFpWMvKHwz7Bc7H5CwMspB9SG3WyyFRed3Ua");
+declare_id!("6AXDZgH6QnCwCzJZEYp7bsQrq4yxMmhLMus66zy4ZkNF");
 
 pub mod common;
 pub mod instructions;
