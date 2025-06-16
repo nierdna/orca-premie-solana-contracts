@@ -3,7 +3,7 @@ use anchor_spl::token::{self, Token, TokenAccount, Mint};
 use shared::{PreOrder, EconomicConfig, TechnicalConfig};
 
 // Program ID sẽ được set khi deploy
-declare_id!("TradeProgramID111111111111111111111111111111");
+declare_id!("11111111111111111111111111111113");
 
 pub mod instructions;
 pub mod state;
@@ -50,10 +50,18 @@ pub mod premarket_trade {
 
     /// Update economic parameters (Admin only)
     pub fn update_economic_config(
-        ctx: Context<UpdateConfig>,
+        ctx: Context<UpdateEconomicConfig>,
         new_config: EconomicConfig,
     ) -> Result<()> {
         instructions::update_config::update_economic_handler(ctx, new_config)
+    }
+
+    /// Update technical parameters (Admin only)
+    pub fn update_technical_config(
+        ctx: Context<UpdateTechnicalConfig>,
+        new_config: TechnicalConfig,
+    ) -> Result<()> {
+        instructions::update_config::update_technical_handler(ctx, new_config)
     }
 
     /// Add/remove relayers (Admin only)

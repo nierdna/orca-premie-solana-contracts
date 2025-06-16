@@ -131,4 +131,58 @@ pub enum TradingError {
     
     #[msg("Settlement deadline passed")]
     SettlementDeadlinePassed,
+    
+    #[msg("Trading not active")]
+    TradingNotActive,
+    
+    #[msg("Invalid order type")]
+    InvalidOrderType,
+    
+    #[msg("Invalid quantity")]
+    InvalidQuantity,
+    
+    #[msg("Insufficient balance")]
+    InsufficientBalance,
+    
+    #[msg("Invalid token mint")]
+    InvalidTokenMint,
+    
+    #[msg("Invalid market")]
+    InvalidMarket,
+    
+    #[msg("Order not found")]
+    OrderNotFound,
+    
+    #[msg("Order already filled")]
+    OrderAlreadyFilled,
+    
+    #[msg("Order already cancelled")]
+    OrderAlreadyCancelled,
+    
+    #[msg("Invalid order owner")]
+    InvalidOrderOwner,
+    
+    #[msg("Trading time not started")]
+    TradingNotStarted,
+    
+    #[msg("Trading time ended")]
+    TradingEnded,
+    
+    #[msg("Insufficient remaining supply")]
+    InsufficientRemainingSupply,
+    
+    #[msg("Invalid price")]
+    InvalidPrice,
+    
+    #[msg("Invalid time range")]
+    InvalidTimeRange,
+    
+    #[msg("Vault program mismatch")]
+    VaultProgramMismatch,
+    
+    #[msg("CPI call failed")]
+    CPICallFailed,
+    
+    #[msg("Token not mapped")]
+    TokenNotMapped,
 } 

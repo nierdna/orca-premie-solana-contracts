@@ -1,6 +1,7 @@
 [package]
 name = "premarket-trade"
 version = "0.1.0"
+description = "PreMarket Trading Program - Solana Implementation"
 edition = "2021"
 
 [lib]
@@ -15,8 +16,8 @@ cpi = ["no-entrypoint"]
 default = []
 
 [dependencies]
-anchor-lang = { workspace = true }
-anchor-spl = { workspace = true }
+anchor-lang = { version = "0.29.0", features = ["init-if-needed"] }
+anchor-spl = "0.29.0"
 solana-program = { workspace = true }
 shared = { path = "../shared" }
 escrow-vault = { path = "../escrow-vault", features = ["cpi"] } 
