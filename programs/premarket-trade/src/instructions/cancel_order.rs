@@ -37,7 +37,7 @@ use anchor_spl::token::{Token, TokenAccount};
 use crate::state::*;
 use crate::error::TradingError;
 use crate::events::OrderCancelled;
-use crate::utils::{verify_order_signature, calculate_order_hash};
+use crate::utils::{calculate_order_hash, validate_order_business_logic};
 use crate::common::PreOrder;
 
 // Import vault program for CPI calls
@@ -45,7 +45,7 @@ use escrow_vault::cpi;
 use escrow_vault::program::EscrowVault;
 
 #[derive(Accounts)]
-#[instruction(order: PreOrder, signature: [u8; 64])]
+#[instruction(order: PreOrder)]
 pub struct CancelOrder<'info> {
     /// OrderStatus PDA to track cancellation
     #[account(
@@ -133,13 +133,12 @@ pub struct CancelOrder<'info> {
 pub fn handler(
     ctx: Context<CancelOrder>,
     order: PreOrder,
-    signature: [u8; 64],
 ) -> Result<()> {
     let config = &ctx.accounts.config;
     let current_time = Clock::get()?.unix_timestamp;
     
-    // Step 1: Verify order signature
-    verify_order_signature(&order, &signature, &order.trader)?;
+    // Step 1: Validate order business logic (no signature verification in relayer model)
+    validate_order_business_logic(&order, &order.trader)?;
     
     // Step 2: Validate order timing
     require!(

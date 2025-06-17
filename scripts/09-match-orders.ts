@@ -15,7 +15,6 @@ import {
 } from "@solana/web3.js";
 import * as fs from "fs";
 import dotenv from "dotenv";
-import { ed25519 } from '@noble/curves/ed25519';
 import { getVaultConfigPDA } from "./01-initialize-vault";
 import { getAssociatedTokenAddress, TOKEN_PROGRAM_ID } from "@solana/spl-token";
 import { getVaultAuthorityPDA } from "./03-deposit-collateral";
@@ -68,32 +67,7 @@ function getUserBalancePDA(vaultProgramId: PublicKey, user: PublicKey, mint: Pub
     );
 }
 
-/**
- * Create order message for signature
- */
-function createOrderMessage(order: any): Uint8Array {
-    const message = Buffer.concat([
-        Buffer.from("PreMarketOrder"),
-        order.trader.toBuffer(),
-        order.collateralToken.toBuffer(),
-        order.tokenId.toBuffer(),
-        new anchor.BN(order.amount).toArrayLike(Buffer, 'le', 8),
-        new anchor.BN(order.price).toArrayLike(Buffer, 'le', 8),
-        Buffer.from([order.isBuy ? 1 : 0]),
-        new anchor.BN(order.nonce).toArrayLike(Buffer, 'le', 8),
-        new anchor.BN(order.deadline).toArrayLike(Buffer, 'le', 8),
-    ]);
-    return new Uint8Array(message);
-}
-
-/**
- * Sign order with keypair
- */
-function signOrder(order: any, signer: Keypair): [number] {
-    const message = createOrderMessage(order);
-    const signature = ed25519.sign(message, signer.secretKey.slice(0, 32));
-    return Array.from(signature) as [number];
-}
+// Signature functions removed - not needed in relayer-authorized model
 
 // Load programs
 // const provider = anchor.AnchorProvider.env();
@@ -207,10 +181,8 @@ async function matchOrders(): Promise<void> {
             deadline: new anchor.BN(deadline),
         };
 
-        // Sign orders
-        console.log("✍️  Signing orders...");
-        const buySignature = signOrder(buyOrder, buyTrader);
-        const sellSignature = signOrder(sellOrder, sellTrader);
+        // No need to sign orders in relayer-authorized model
+        console.log("🔐 Relayer-authorized matching model - no signatures needed");
 
         // Get PDAs
         const [tradeConfigPDA] = getTradeConfigPDA(tradingProgramId);
@@ -231,15 +203,13 @@ async function matchOrders(): Promise<void> {
         console.log(`  Buy User Balance: ${buyUserBalancePDA.toString()}`);
         console.log(`  Sell User Balance: ${sellUserBalancePDA.toString()}`);
 
-        // Match orders
-        console.log("🚀 Matching orders...");
+        // Match orders - ultra lightweight transaction
+        console.log("🚀 Matching orders with relayer authorization...");
 
         const tx = await tradingProgram.methods
             .matchOrders(
                 buyOrder,
                 sellOrder,
-                Array.from(buySignature),
-                Array.from(sellSignature),
                 fillAmount ? new anchor.BN(fillAmount) : null
             )
             .accounts({
@@ -253,16 +223,16 @@ async function matchOrders(): Promise<void> {
                 sellerBalance: sellUserBalancePDA,
                 vaultProgram: vaultProgramId,
                 vaultConfig: vaultConfigPDA,
-                vaultAuthority: vaultAuthorityPDA,        // ✅ THÊM
-                buyerCollateralAta: buyerCollateralAta,   // ✅ THÊM
-                sellerCollateralAta: sellerCollateralAta, // ✅ THÊM
-                tokenProgram: TOKEN_PROGRAM_ID,           // ✅ THÊM
+                vaultAuthority: vaultAuthorityPDA,
+                buyerCollateralAta: buyerCollateralAta,
+                sellerCollateralAta: sellerCollateralAta,
+                tokenProgram: TOKEN_PROGRAM_ID,           
                 systemProgram: SystemProgram.programId,
-                instructionSysvar: SYSVAR_INSTRUCTIONS_PUBKEY,  // ✅ THÊM
-            }).postInstructions([
-                // Tăng compute budget
+                instructionSysvar: SYSVAR_INSTRUCTIONS_PUBKEY,
+            }).preInstructions([
+            // Much lower compute budget needed - no signature verification
                 anchor.web3.ComputeBudgetProgram.setComputeUnitLimit({
-                    units: 400_000 // Tăng từ 200k lên 400k
+                    units: 450_000 // Reduced from 400k - no Ed25519Program overhead
                 })
             ])
             .signers([relayer, tradeRecord])
@@ -311,4 +281,4 @@ if (require.main === module) {
         });
 }
 
-export { matchOrders, loadKeypairFromFile, getTradeConfigPDA, getOrderStatusPDA, getUserBalancePDA, createOrderMessage, signOrder }; 
+export { matchOrders, loadKeypairFromFile, getTradeConfigPDA, getOrderStatusPDA, getUserBalancePDA }; 

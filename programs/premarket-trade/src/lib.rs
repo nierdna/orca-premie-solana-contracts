@@ -79,16 +79,12 @@ pub mod premarket_trade {
         ctx: Context<MatchOrders>,
         buy_order: PreOrder,
         sell_order: PreOrder,
-        buy_signature: [u8; 64],
-        sell_signature: [u8; 64],
         fill_amount: Option<u64>,
     ) -> Result<()> {
         instructions::match_orders::handler(
             ctx,
             buy_order,
             sell_order,
-            buy_signature,
-            sell_signature,
             fill_amount,
         )
     }
@@ -105,13 +101,12 @@ pub mod premarket_trade {
         instructions::cancel_trade::handler(ctx)
     }
 
-    /// Cancel order before matching (User)
+    /// Cancel a pending order and unlock collateral
     pub fn cancel_order(
         ctx: Context<CancelOrder>,
         order: PreOrder,
-        signature: [u8; 64],
     ) -> Result<()> {
-        instructions::cancel_order::handler(ctx, order, signature)
+        instructions::cancel_order::handler(ctx, order)
     }
 
     /// Emergency pause (Admin only)

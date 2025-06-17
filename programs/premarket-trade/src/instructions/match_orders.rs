@@ -4,7 +4,7 @@ use crate::common::PreOrder;
 use crate::state::*;
 use crate::error::TradingError;
 use crate::events::OrdersMatched;
-use crate::utils::{verify_order_signature, can_match_orders, calculate_fill_amount};
+use crate::utils::{can_match_orders, calculate_fill_amount, validate_order_business_logic};
 
 // Import vault program for actual CPI calls
 use escrow_vault::cpi;
@@ -99,15 +99,19 @@ pub fn handler(
     ctx: Context<MatchOrders>,
     buy_order: PreOrder,
     sell_order: PreOrder,
-    buy_signature: [u8; 64],
-    sell_signature: [u8; 64],
     fill_amount: Option<u64>,
 ) -> Result<()> {
     // Get account keys before mutable borrows
     let trade_record_key = ctx.accounts.trade_record.key();
     let token_market_key = ctx.accounts.token_market.key();
     
-    // Validate orders can be matched
+    // Enhanced relayer authorization - ensure only authorized relayers can match
+    require!(
+        ctx.accounts.config.is_relayer(&ctx.accounts.relayer.key()),
+        TradingError::UnauthorizedRelayer
+    );
+    
+    // Validate orders can be matched (business logic)
     can_match_orders(&buy_order, &sell_order)?;
     
     // Validate token market matches orders
@@ -120,9 +124,16 @@ pub fn handler(
         TradingError::TokenMintMismatch
     );
     
-    // Verify order signatures
-    verify_order_signature(&buy_order, &buy_signature, &buy_order.trader)?;
-    verify_order_signature(&sell_order, &sell_signature, &sell_order.trader)?;
+    // Validate order business logic (no signature verification)
+    validate_order_business_logic(&buy_order, &buy_order.trader)?;
+    validate_order_business_logic(&sell_order, &sell_order.trader)?;
+    
+    // Additional business protections for relayer model
+    let current_time = Clock::get()?.unix_timestamp;
+    require!(
+        buy_order.deadline > current_time && sell_order.deadline > current_time,
+        TradingError::OrderExpired
+    );
     
     // Calculate actual fill amount
     let actual_fill_amount = calculate_fill_amount(
@@ -192,7 +203,8 @@ pub fn handler(
     });
     
     msg!(
-        "Orders matched: trade_id: {} - buyer: {} - seller: {} - amount: {} - price: {}",
+        "🎯 Orders matched by relayer: {} - trade_id: {} - buyer: {} - seller: {} - amount: {} - price: {}",
+        ctx.accounts.relayer.key(),
         trade_record.trade_id,
         trade_record.buyer,
         trade_record.seller,
