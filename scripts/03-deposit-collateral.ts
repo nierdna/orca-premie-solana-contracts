@@ -116,12 +116,14 @@ async function depositCollateral(): Promise<void> {
 
     // Configuration
     const tokenMint = new PublicKey('5FPTnHuxwyqSpuRdjQwaemi8YoW5KT7CeMWQ55v6mCef');
-    const depositAmount = new anchor.BN(1 * 10 ** 6); // 1 token
+    const depositAmount = new anchor.BN(1000 * 10 ** 6); // 1 token
     const vaultProgramId = new PublicKey('a7GxwYc2RSZgiHc9Z8YMr82NppshTNPbqMbfSfvyroE');
 
     // Setup
     const connection = new Connection(process.env.RPC_URL!, 'confirmed');
-    const user = loadKeypairFromFile(process.env.DEPLOYER_KEYPAIR!);
+    const user = loadKeypairFromFile(process.env.SELL_TRADER_KEYPAIR!);
+    // const user = loadKeypairFromFile(process.env.BUY_TRADER_KEYPAIR!);
+    // const user = loadKeypairFromFile(process.env.DEPLOYER_KEYPAIR!);
     const provider = new anchor.AnchorProvider(connection, new anchor.Wallet(user), { commitment: 'confirmed' });
     anchor.setProvider(provider);
 

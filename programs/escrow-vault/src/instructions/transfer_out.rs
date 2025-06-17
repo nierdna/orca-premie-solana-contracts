@@ -3,17 +3,19 @@ use anchor_spl::token::{self, Token, TokenAccount, Transfer};
 use crate::state::*;
 use crate::error::VaultError;
 use crate::events::*;
+use crate::utils::get_cpi_caller_program_id;
 
 /// CPI ONLY: Transfer tokens out of vault (exact EVM transferOut mapping)
 /// Used by trading program for settlement and cancellation
+/// 
+/// 🛡️ INSTRUCTION SYSVAR PATTERN IMPLEMENTATION
 #[derive(Accounts)]
 #[instruction(recipient: Pubkey, amount: u64)]
 pub struct TransferOut<'info> {
     #[account(
         seeds = [VaultConfig::VAULT_CONFIG_SEED],
         bump = config.bump,
-        constraint = config.is_authorized_trader(&crate::id()) @ VaultError::UnauthorizedTrader,
-        constraint = !config.paused @ VaultError::VaultPaused,
+        // ✅ ONLY basic validations in constraints - no CPI authorization here
     )]
     pub config: Box<Account<'info, VaultConfig>>,
     
@@ -36,91 +38,93 @@ pub struct TransferOut<'info> {
             user_balance.token_mint.as_ref()
         ],
         bump = vault_authority.bump,
-        constraint = vault_authority.token_mint == user_balance.token_mint @ VaultError::InvalidTokenMint,
     )]
     pub vault_authority: Box<Account<'info, VaultAuthority>>,
     
     #[account(
         mut,
-        constraint = vault_ata.key() == vault_authority.vault_ata @ VaultError::InvalidTokenMint,
-        constraint = vault_ata.mint == user_balance.token_mint @ VaultError::InvalidTokenMint,
+        constraint = vault_token_account.mint == user_balance.token_mint @ VaultError::TokenMintMismatch,
+        constraint = vault_token_account.owner == vault_authority.key() @ VaultError::InvalidVaultAuthority,
     )]
-    pub vault_ata: Box<Account<'info, TokenAccount>>,
+    pub vault_token_account: Box<Account<'info, TokenAccount>>,
     
-    #[account(
-        mut,
-        constraint = recipient_ata.mint == user_balance.token_mint @ VaultError::InvalidTokenMint,
-        constraint = recipient_ata.owner == recipient @ VaultError::InvalidAccountOwner,
-    )]
-    pub recipient_ata: Box<Account<'info, TokenAccount>>,
+    /// CHECK: Recipient token account - validated in handler
+    #[account(mut)]
+    pub recipient_token_account: AccountInfo<'info>,
     
     pub token_program: Program<'info, Token>,
+    
+    /// 🛡️ INSTRUCTION SYSVAR - For precise caller detection
+    /// CHECK: Validated by constraint to ensure it's the instruction sysvar
+    #[account(
+        constraint = instruction_sysvar.key() == solana_program::sysvar::instructions::ID @ VaultError::InvalidInstructionSysvar
+    )]
+    pub instruction_sysvar: AccountInfo<'info>,
 }
 
-pub fn handler(
-    ctx: Context<TransferOut>,
-    recipient: Pubkey,
-    amount: u64,
-) -> Result<()> {
-    // Validate amount
+/// 🛡️ INSTRUCTION SYSVAR PATTERN - Most accurate CPI caller detection
+pub fn handler(ctx: Context<TransferOut>, recipient: Pubkey, amount: u64) -> Result<()> {
+    // 🔍 STEP 1: Get precise caller program ID from instruction sysvar
+    let caller_program_id = get_cpi_caller_program_id(&ctx.accounts.instruction_sysvar)?;
+    
+    // 🔒 STEP 2: Validate CPI caller authorization using precise detection
+    ctx.accounts.config.validate_cpi_caller_precise(
+        &caller_program_id, 
+        "TransferOut"
+    )?;
+    
+    // 🔒 STEP 3: Validate business logic parameters
     require!(amount > 0, VaultError::ZeroAmount);
     
-    // Validate CPI caller is authorized trading program
-    let caller_program = ctx.program_id;
-    require!(
-        ctx.accounts.config.is_authorized_trader(caller_program),
-        VaultError::UnauthorizedCPICaller
-    );
-    
+    // ✅ STEP 4: Execute token transfer
     let user_balance = &mut ctx.accounts.user_balance;
-    let vault_authority = &mut ctx.accounts.vault_authority;
     
-    // Subtract from user balance (already locked by slash_balance)
-    user_balance.slash_balance(amount)?;
-    
-    // Subtract from total deposits
-    vault_authority.subtract_deposit(amount)?;
-    
-    // Transfer tokens from vault to recipient
-    let token_mint = vault_authority.token_mint;
-    let vault_authority_bump = vault_authority.bump;
-    let bump_seed = [vault_authority_bump];
-    
-    let signer_seeds: &[&[u8]] = &[
+    // Create PDA signer seeds
+    let seeds = &[
         VaultAuthority::VAULT_AUTHORITY_SEED,
-        token_mint.as_ref(),
-        &bump_seed,
+        user_balance.token_mint.as_ref(),
+        &[ctx.accounts.vault_authority.bump],
     ];
-    let signer_seeds_slice = &[signer_seeds];
+    let signer = &[&seeds[..]];
     
-    let transfer_cpi = CpiContext::new_with_signer(
-        ctx.accounts.token_program.to_account_info(),
-        Transfer {
-            from: ctx.accounts.vault_ata.to_account_info(),
-            to: ctx.accounts.recipient_ata.to_account_info(),
-            authority: vault_authority.to_account_info(),
-        },
-        signer_seeds_slice,
-    );
+    // Perform CPI to token program
+    let cpi_accounts = Transfer {
+        from: ctx.accounts.vault_token_account.to_account_info(),
+        to: ctx.accounts.recipient_token_account.to_account_info(),
+        authority: ctx.accounts.vault_authority.to_account_info(),
+    };
     
-    token::transfer(transfer_cpi, amount)?;
+    let cpi_program = ctx.accounts.token_program.to_account_info();
+    let cpi_ctx = CpiContext::new_with_signer(cpi_program, cpi_accounts, signer);
     
-    // Emit event
+    token::transfer(cpi_ctx, amount)?;
+    
+    // Update user balance
+    user_balance.balance = user_balance.balance
+        .checked_sub(amount)
+        .ok_or(VaultError::ArithmeticOverflow)?;
+    
+    // 📡 STEP 5: Emit event with precise caller info
     emit!(TokensTransferredOut {
         user: user_balance.user,
-        recipient,
         token_mint: user_balance.token_mint,
+        recipient,
         amount,
-        caller_program: *caller_program,
+        caller_program: caller_program_id,
     });
     
+    // 📝 STEP 6: Structured logging with precise caller
     msg!(
-        "Tokens transferred out: from_user={}, recipient={}, token={}, amount={}",
+        "✅ Tokens transferred out successfully: user={}, token={}, recipient={}, amount={}, remaining_balance={}, precise_caller={}",
         user_balance.user,
-        recipient,
         user_balance.token_mint,
-        amount
+        recipient,
+        amount,
+        user_balance.balance,
+        caller_program_id
     );
     
     Ok(())
-} 
+}
+
+ 

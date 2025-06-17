@@ -44,4 +44,46 @@ pub enum VaultError {
     
     #[msg("Unauthorized CPI caller")]
     UnauthorizedCPICaller,
+    
+    #[msg("Unauthorized trader program")]
+    UnauthorizedTraderProgram,
+    
+    #[msg("Token mint mismatch")]
+    TokenMintMismatch,
+    
+    #[msg("Invalid vault authority")]
+    InvalidVaultAuthority,
+    
+    #[msg("Arithmetic overflow")]
+    ArithmeticOverflow,
+    
+    #[msg("Invalid token account")]
+    InvalidTokenAccount,
+    
+    #[msg("Transfer failed")]
+    TransferFailed,
+    
+    #[msg("Invalid recipient")]
+    InvalidRecipient,
+    
+    #[msg("Account already initialized")]
+    AccountAlreadyInitialized,
+    
+    #[msg("Account not initialized")]
+    AccountNotInitialized,
+    
+    #[msg("Trader already authorized")]
+    TraderAlreadyAuthorized,
+    
+    #[msg("Maximum traders reached")]
+    MaximumTradersReached,
+    
+    #[msg("Invalid instruction sysvar account")]
+    InvalidInstructionSysvar,
+    
+    #[msg("Failed to load instruction from sysvar")]
+    FailedToLoadInstruction,
+    
+    #[msg("CPI caller detection failed")]
+    CpiCallerDetectionFailed,
 } 

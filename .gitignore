@@ -140,3 +140,5 @@ test-validator-ledger/
 
 
 premarket-trade-backup/
+
+.keys/

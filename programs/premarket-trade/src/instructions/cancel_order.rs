@@ -121,6 +121,13 @@ pub struct CancelOrder<'info> {
     
     pub token_program: Program<'info, Token>,
     pub system_program: Program<'info, System>,
+    
+    /// 🛡️ INSTRUCTION SYSVAR - For precise CPI caller detection
+    /// CHECK: Validated by constraint to ensure it's the instruction sysvar
+    #[account(
+        constraint = instruction_sysvar.key() == solana_program::sysvar::instructions::ID @ TradingError::InvalidInstructionSysvar
+    )]
+    pub instruction_sysvar: AccountInfo<'info>,
 }
 
 pub fn handler(
@@ -267,6 +274,7 @@ fn unlock_order_collateral_cpi(
         config: ctx.accounts.vault_config.to_account_info(),
         user_balance: ctx.accounts.trader_balance.to_account_info(),
         vault_authority: ctx.accounts.vault_authority.to_account_info(),
+        instruction_sysvar: ctx.accounts.instruction_sysvar.to_account_info(),
     };
     
     let cpi_program = ctx.accounts.vault_program.to_account_info();

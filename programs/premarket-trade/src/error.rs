@@ -185,4 +185,7 @@ pub enum TradingError {
     
     #[msg("Token not mapped")]
     TokenNotMapped,
+    
+    #[msg("Invalid instruction sysvar account")]
+    InvalidInstructionSysvar,
 } 

@@ -31,8 +31,15 @@ impl VaultConfig {
     }
 
     pub fn add_authorized_trader(&mut self, trader_program: Pubkey) -> Result<()> {
-        require!(!self.is_authorized_trader(&trader_program), VaultError::DuplicateAuthorizedTrader);
-        require!(self.authorized_traders.len() < 10, VaultError::TooManyAuthorizedTraders);
+        require!(
+            !self.authorized_traders.contains(&trader_program),
+            VaultError::TraderAlreadyAuthorized
+        );
+        
+        require!(
+            self.authorized_traders.len() < 10,
+            VaultError::MaximumTradersReached
+        );
         
         self.authorized_traders.push(trader_program);
         Ok(())
@@ -45,6 +52,75 @@ impl VaultConfig {
             .ok_or(VaultError::TraderNotFound)?;
         
         self.authorized_traders.remove(position);
+        Ok(())
+    }
+
+    /// ✅ STANDARD CPI VALIDATION - Basic validation
+    pub fn validate_cpi_caller(&self) -> Result<()> {
+        require!(!self.paused, VaultError::VaultPaused);
+        Ok(())
+    }
+
+    /// 🔍 DEBUG CPI VALIDATION - With detailed logging
+    pub fn validate_cpi_caller_with_logging(&self, caller_program: &Pubkey, operation: &str) -> Result<()> {
+        msg!("🔍 CPI Validation Debug for {}", operation);
+        msg!("📞 Caller Program: {}", caller_program);
+        msg!("👥 Authorized Traders Count: {}", self.authorized_traders.len());
+        
+        for (i, trader) in self.authorized_traders.iter().enumerate() {
+            msg!("  {}. {}", i + 1, trader);
+        }
+        
+        require!(!self.paused, VaultError::VaultPaused);
+        
+        require!(
+            self.is_authorized_trader(caller_program),
+            VaultError::UnauthorizedTrader
+        );
+        
+        msg!("✅ CPI Validation passed for {}", operation);
+        Ok(())
+    }
+
+    /// 🛡️ PRECISE CPI VALIDATION - Using instruction sysvar detection
+    /// This is the most accurate method for CPI caller validation
+    pub fn validate_cpi_caller_precise(&self, caller_program_id: &Pubkey, operation: &str) -> Result<()> {
+        // Validate vault is not paused
+        require!(!self.paused, VaultError::VaultPaused);
+        
+        // Validate caller is authorized using precise detection
+        require!(
+            self.is_authorized_trader(caller_program_id),
+            VaultError::UnauthorizedTrader
+        );
+        
+        Ok(())
+    }
+
+    /// 🚀 ADVANCED CPI VALIDATION - With additional security features
+    pub fn validate_cpi_caller_advanced(&self, caller_program: &Pubkey, operation: &str) -> Result<()> {
+        // Basic validations
+        require!(!self.paused, VaultError::VaultPaused);
+        
+        // Authorization check
+        require!(
+            self.is_authorized_trader(caller_program),
+            VaultError::UnauthorizedTrader
+        );
+        
+        // Additional security: Check if caller is not a system program
+        require!(
+            *caller_program != solana_program::system_program::ID,
+            VaultError::UnauthorizedTrader
+        );
+        
+        // Additional security: Check if caller is not a token program
+        require!(
+            *caller_program != anchor_spl::token::ID,
+            VaultError::UnauthorizedTrader
+        );
+        
+        msg!("🚀 Advanced CPI Validation passed for {}: caller={}", operation, caller_program);
         Ok(())
     }
 } 

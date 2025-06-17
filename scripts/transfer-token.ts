@@ -1,7 +1,7 @@
 #!/usr/bin/env ts-node
 
 import { Connection, Keypair, PublicKey } from "@solana/web3.js";
-import { createTransferInstruction, getAssociatedTokenAddress, TOKEN_PROGRAM_ID } from "@solana/spl-token";
+import { createTransferInstruction, getAssociatedTokenAddress, TOKEN_PROGRAM_ID, createAssociatedTokenAccountInstruction } from "@solana/spl-token";
 import * as fs from "fs";
 import dotenv from "dotenv";
 
@@ -39,23 +39,46 @@ async function transferToken(): Promise<void> {
         const fromKeypair = loadKeypairFromFile(keypairPath);
 
         const fromAta = await getAssociatedTokenAddress(mint, fromKeypair.publicKey);
+        const fromBalance = await connection.getTokenAccountBalance(fromAta);
+        console.log(`💰 From balance: ${fromBalance.value.uiAmount} tokens`);
+
         const toAta = await getAssociatedTokenAddress(mint, to);
 
         console.log(`🔄 Transferring ${amountStr} tokens...`);
         console.log(`From: ${fromKeypair.publicKey.toString()}`);
         console.log(`To: ${to.toString()}`);
 
+        // ✅ Create single transaction with multiple instructions
+        const { Transaction } = await import("@solana/web3.js");
+        const transaction = new Transaction();
+
+        // ✅ Check if destination token account exists and add create instruction if needed
+        const toAccountInfo = await connection.getAccountInfo(toAta);
+        if (!toAccountInfo) {
+            console.log(`🏗️ Destination token account doesn't exist, will create: ${toAta.toString()}`);
+            const createAtaInstruction = createAssociatedTokenAccountInstruction(
+                fromKeypair.publicKey, // payer
+                toAta,                 // associatedToken
+                to,                    // owner
+                mint                   // mint
+            );
+            transaction.add(createAtaInstruction);
+        } else {
+            console.log(`✅ Destination token account already exists`);
+        }
+
+        // ✅ Add transfer instruction
         const transferInstruction = createTransferInstruction(
             fromAta,
             toAta,
             fromKeypair.publicKey,
-            Number(amount),
+            amount, // ✅ Use bigint directly instead of Number(amount)
             [],
             TOKEN_PROGRAM_ID
         );
+        transaction.add(transferInstruction);
 
-        const transaction = new (await import("@solana/web3.js")).Transaction().add(transferInstruction);
-
+        // ✅ Send single transaction with all instructions
         const signature = await connection.sendTransaction(transaction, [fromKeypair]);
         await connection.confirmTransaction(signature, 'confirmed');
 

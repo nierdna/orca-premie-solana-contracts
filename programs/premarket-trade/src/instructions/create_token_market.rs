@@ -7,10 +7,11 @@ use crate::events::TokenMarketCreated;
 #[instruction(symbol: String, name: String, settle_time_limit: u32)]
 pub struct CreateTokenMarket<'info> {
     /// TokenMarket account (User-controlled keypair, not PDA)
-    /// Must be pre-created by client using SystemProgram.createAccount
+    /// Client generates keypair, Anchor handles account creation/initialization
     #[account(
-        mut,
-        constraint = token_market.to_account_info().owner == &crate::ID @ TradingError::InvalidAccountOwner,
+        init_if_needed,
+        payer = admin,
+        space = 8 + TokenMarket::INIT_SPACE,
         constraint = symbol.len() <= crate::common::MAX_SYMBOL_LENGTH @ TradingError::SymbolTooLong,
         constraint = name.len() <= crate::common::MAX_NAME_LENGTH @ TradingError::NameTooLong,
         constraint = settle_time_limit >= 3600 @ TradingError::InvalidSettleTime,

@@ -13,18 +13,19 @@ use escrow_vault::program::EscrowVault;
 #[derive(Accounts)]
 pub struct MatchOrders<'info> {
     /// TradeRecord account (User-controlled keypair, not PDA)
-    /// Must be pre-created by client using SystemProgram.createAccount
+    /// Client generates keypair, Anchor handles account creation/initialization
     #[account(
-        mut,
-        constraint = trade_record.to_account_info().owner == &crate::ID @ TradingError::InvalidAccountOwner,
+        init_if_needed,
+        payer = relayer,
+        space = 8 + TradeRecord::INIT_SPACE,
     )]
-    pub trade_record: Account<'info, TradeRecord>,
+    pub trade_record: Box<Account<'info, TradeRecord>>,
     
     /// TokenMarket for the trading pair
     #[account(
         constraint = token_market.to_account_info().owner == &crate::ID @ TradingError::InvalidAccountOwner,
     )]
-    pub token_market: Account<'info, TokenMarket>,
+    pub token_market: Box<Account<'info, TokenMarket>>,
     
     /// Trade configuration PDA for relayer validation
     #[account(
@@ -33,7 +34,7 @@ pub struct MatchOrders<'info> {
         constraint = config.is_relayer(&relayer.key()) @ TradingError::UnauthorizedRelayer,
         constraint = !config.paused @ TradingError::TradingPaused,
     )]
-    pub config: Account<'info, TradeConfig>,
+    pub config: Box<Account<'info, TradeConfig>>,
     
     /// Authorized relayer executing the match
     #[account(mut)]
@@ -52,14 +53,16 @@ pub struct MatchOrders<'info> {
         bump,
         seeds::program = vault_program.key(),
     )]
-    pub vault_config: Account<'info, escrow_vault::state::VaultConfig>,
+    pub vault_config: Box<Account<'info, escrow_vault::state::VaultConfig>>,
     
     /// Buyer balance PDA - validated in handler
     /// CHECK: Buyer balance account validated via CPI to vault program
+    #[account(mut)]
     pub buyer_balance: AccountInfo<'info>,
     
     /// Seller balance PDA - validated in handler  
     /// CHECK: Seller balance account validated via CPI to vault program
+    #[account(mut)]
     pub seller_balance: AccountInfo<'info>,
     
     /// Vault authority PDA - properly typed and validated
@@ -71,18 +74,25 @@ pub struct MatchOrders<'info> {
         bump,
         seeds::program = vault_program.key(),
     )]
-    pub vault_authority: Account<'info, escrow_vault::state::VaultAuthority>,
+    pub vault_authority: Box<Account<'info, escrow_vault::state::VaultAuthority>>,
     
     // Token accounts for collateral validation
     #[account(
         constraint = buyer_collateral_ata.mint == seller_collateral_ata.mint @ TradingError::TokenMintMismatch,
     )]
-    pub buyer_collateral_ata: Account<'info, TokenAccount>,
+    pub buyer_collateral_ata: Box<Account<'info, TokenAccount>>,
     
-    pub seller_collateral_ata: Account<'info, TokenAccount>,
+    pub seller_collateral_ata: Box<Account<'info, TokenAccount>>,
     
     pub token_program: Program<'info, Token>,
     pub system_program: Program<'info, System>,
+    
+    /// 🛡️ INSTRUCTION SYSVAR - For precise CPI caller detection
+    /// CHECK: Validated by constraint to ensure it's the instruction sysvar
+    #[account(
+        constraint = instruction_sysvar.key() == solana_program::sysvar::instructions::ID @ TradingError::InvalidInstructionSysvar
+    )]
+    pub instruction_sysvar: AccountInfo<'info>,
 }
 
 pub fn handler(
@@ -233,6 +243,7 @@ fn lock_buyer_collateral_cpi(
         config: ctx.accounts.vault_config.to_account_info(),
         user_balance: ctx.accounts.buyer_balance.to_account_info(),
         vault_authority: ctx.accounts.vault_authority.to_account_info(),
+        instruction_sysvar: ctx.accounts.instruction_sysvar.to_account_info(),
     };
     
     let cpi_program = ctx.accounts.vault_program.to_account_info();
@@ -258,6 +269,7 @@ fn lock_seller_collateral_cpi(
         config: ctx.accounts.vault_config.to_account_info(),
         user_balance: ctx.accounts.seller_balance.to_account_info(),
         vault_authority: ctx.accounts.vault_authority.to_account_info(),
+        instruction_sysvar: ctx.accounts.instruction_sysvar.to_account_info(),
     };
     
     let cpi_program = ctx.accounts.vault_program.to_account_info();
