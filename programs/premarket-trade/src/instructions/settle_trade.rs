@@ -93,10 +93,12 @@ pub struct SettleTrade<'info> {
     
     /// Seller balance PDA for collateral release
     /// CHECK: Seller balance account validated via CPI to vault program
+    #[account(mut)]
     pub seller_balance: AccountInfo<'info>,
     
     /// Vault authority PDA
     #[account(
+        mut,
         seeds = [
             escrow_vault::state::VaultAuthority::VAULT_AUTHORITY_SEED,
             trade_record.collateral_mint.as_ref()
@@ -108,6 +110,7 @@ pub struct SettleTrade<'info> {
     
     /// Vault ATA for collateral token
     #[account(
+        mut,
         constraint = vault_ata.mint == trade_record.collateral_mint @ TradingError::TokenMintMismatch,
     )]
     pub vault_ata: Box<Account<'info, TokenAccount>>,
@@ -139,6 +142,13 @@ pub struct SettleTrade<'info> {
     
     pub token_program: Program<'info, Token>,
     pub system_program: Program<'info, System>,
+    
+    /// 🛡️ INSTRUCTION SYSVAR - For precise CPI caller detection
+    /// CHECK: Validated by constraint to ensure it's the instruction sysvar
+    #[account(
+        constraint = instruction_sysvar.key() == solana_program::sysvar::instructions::ID @ TradingError::InvalidInstructionSysvar
+    )]
+    pub instruction_sysvar: AccountInfo<'info>,
 }
 
 pub fn handler(ctx: Context<SettleTrade>) -> Result<()> {
@@ -274,9 +284,10 @@ fn release_seller_collateral_cpi(
         config: ctx.accounts.vault_config.to_account_info(),
         user_balance: ctx.accounts.seller_balance.to_account_info(),
         vault_authority: ctx.accounts.vault_authority.to_account_info(),
-        vault_ata: ctx.accounts.vault_ata.to_account_info(),
-        recipient_ata: ctx.accounts.seller_collateral_ata.to_account_info(),
+        vault_token_account: ctx.accounts.vault_ata.to_account_info(),
+        recipient_token_account: ctx.accounts.seller_collateral_ata.to_account_info(),
         token_program: ctx.accounts.token_program.to_account_info(),
+        instruction_sysvar: ctx.accounts.instruction_sysvar.to_account_info(),
     };
     
     let cpi_program = ctx.accounts.vault_program.to_account_info();
