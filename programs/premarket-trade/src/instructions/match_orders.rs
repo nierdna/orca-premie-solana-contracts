@@ -176,7 +176,7 @@ pub fn handler(
     trade_record.seller_collateral = seller_collateral;
     trade_record.match_time = match_time;
     trade_record.settled = false;
-    trade_record.target_mint = None;
+    // trade_record.target_mint = None;
     
     // Emit OrdersMatched event
     emit!(OrdersMatched {

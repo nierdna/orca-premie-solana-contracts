@@ -14,7 +14,7 @@ pub struct CreateTokenMarket<'info> {
         space = 8 + TokenMarket::INIT_SPACE,
         constraint = symbol.len() <= crate::common::MAX_SYMBOL_LENGTH @ TradingError::SymbolTooLong,
         constraint = name.len() <= crate::common::MAX_NAME_LENGTH @ TradingError::NameTooLong,
-        constraint = settle_time_limit >= 3600 @ TradingError::InvalidSettleTime,
+        constraint = settle_time_limit >= 30 @ TradingError::InvalidSettleTime,
         constraint = settle_time_limit <= 2592000 @ TradingError::InvalidSettleTime,
     )]
     pub token_market: Account<'info, TokenMarket>,

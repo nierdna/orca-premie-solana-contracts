@@ -213,7 +213,7 @@ pub fn handler(ctx: Context<SettleTrade>) -> Result<()> {
     // Step 4: Update trade record state
     let trade_record = &mut ctx.accounts.trade_record;
     trade_record.settled = true;
-    trade_record.target_mint = Some(token_market.real_mint.unwrap());
+    // trade_record.target_mint = Some(token_market.real_mint.unwrap());
     
     // Step 5: Emit TradeSettled event
     emit!(TradeSettled {
@@ -221,7 +221,8 @@ pub fn handler(ctx: Context<SettleTrade>) -> Result<()> {
         token_id: trade_record.token_id,        // EVM compatible naming
         buyer: trade_record.buyer,
         seller: trade_record.seller,
-        target_mint: trade_record.target_mint.unwrap(),
+        target_mint: token_market.real_mint.unwrap(),
+        // target_mint: trade_record.target_mint.unwrap(),
         filled_amount: trade_record.filled_amount,
         seller_reward,
         settlement_time: current_time,

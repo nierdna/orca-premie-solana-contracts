@@ -22,7 +22,7 @@ impl TradeConfig {
         32 + // admin
         32 + // vault_program
         4 + (32 * 10) + // relayers (Vec<Pubkey>, max 10)
-        (2 * 6) + // economic_config (6 u16 fields)
+        (2 * 4) + (8 * 2) + // economic_config (4 u16 + 2 u64 fields) ✅
         (4 * 2) + // technical_config (2 u32 fields)
         1 + // paused
         1; // bump

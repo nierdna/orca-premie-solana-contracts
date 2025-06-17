@@ -38,7 +38,7 @@ TRADER_KEYPAIR=~/.config/solana/trader.json
 
 # Program Configuration
 VAULT_PROGRAM_ID=a7GxwYc2RSZgiHc9Z8YMr82NppshTNPbqMbfSfvyroE
-TRADING_PROGRAM_ID=6AXDZgH6QnCwCzJZEYp7bsQrq4yxMmhLMus66zy4ZkNF
+TRADING_PROGRAM_ID=Amj2QtxyLr6GMgBzN2pB5qaq5V8J7jTBrqc4Ar7y4G5t
 
 # Economic Configuration
 BUYER_COLLATERAL_RATIO=10000  # 100%

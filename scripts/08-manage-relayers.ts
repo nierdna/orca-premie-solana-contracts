@@ -66,7 +66,7 @@ async function manageRelayers(): Promise<void> {
         }
 
         // Program IDs
-        const tradingProgramId = new PublicKey('6AXDZgH6QnCwCzJZEYp7bsQrq4yxMmhLMus66zy4ZkNF');
+        const tradingProgramId = new PublicKey('Amj2QtxyLr6GMgBzN2pB5qaq5V8J7jTBrqc4Ar7y4G5t');
 
         console.log(`👑 Admin: ${admin.publicKey.toString()}`);
         console.log(`🤖 Relayer: ${relayerAddress.toString()}`);

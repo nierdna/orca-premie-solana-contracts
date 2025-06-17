@@ -98,7 +98,7 @@ async function initializeTrading(): Promise<void> {
 
         // Program IDs
         const vaultProgramId = new PublicKey('a7GxwYc2RSZgiHc9Z8YMr82NppshTNPbqMbfSfvyroE');
-        const tradingProgramId = new PublicKey('6AXDZgH6QnCwCzJZEYp7bsQrq4yxMmhLMus66zy4ZkNF');
+        const tradingProgramId = new PublicKey('Amj2QtxyLr6GMgBzN2pB5qaq5V8J7jTBrqc4Ar7y4G5t');
 
         console.log(`👤 Deployer: ${deployer.publicKey.toString()}`);
         console.log(`👑 Admin: ${admin.publicKey.toString()}`);

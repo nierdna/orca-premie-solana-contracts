@@ -17,7 +17,7 @@ pub struct TradeRecord {
     pub seller_collateral: u64,     // Seller collateral locked
     pub match_time: i64,            // When trade was matched
     pub settled: bool,              // Settlement status
-    pub target_mint: Option<Pubkey>,// Real token mint (after settlement)
+    // pub target_mint: Option<Pubkey>,// Real token mint (after settlement)
     // NOTE: No bump field - not a PDA, user-controlled keypair
 }
 
@@ -34,8 +34,8 @@ impl TradeRecord {
         8 + // buyer_collateral
         8 + // seller_collateral
         8 + // match_time
-        1 + // settled
-        1 + 32; // target_mint (Option<Pubkey>)
+        1; // settled
+        // 1 + 32; // target_mint (Option<Pubkey>)
 
     pub fn initialize(
         &mut self,
@@ -60,7 +60,7 @@ impl TradeRecord {
         self.seller_collateral = seller_collateral;
         self.match_time = Clock::get().unwrap().unix_timestamp;
         self.settled = false;
-        self.target_mint = None;
+        // self.target_mint = None;
     }
 
     /// Check if trade is settled
@@ -73,7 +73,7 @@ impl TradeRecord {
         require!(!self.settled, TradingError::TradeAlreadySettled);
         
         self.settled = true;
-        self.target_mint = Some(target_mint);
+        // self.target_mint = Some(target_mint);
         
         Ok(())
     }

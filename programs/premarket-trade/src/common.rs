@@ -48,14 +48,14 @@ pub struct PreOrder {
 }
 
 /// Economic Config
-#[derive(AnchorSerialize, AnchorDeserialize, Clone)]
+#[derive(AnchorSerialize, AnchorDeserialize, Clone, Debug)]
 pub struct EconomicConfig {
+    pub minimum_fill_amount: u64,       // Default: 1000
+    pub maximum_order_amount: u64,      // Default: 1e12
     pub buyer_collateral_ratio: u16,    // Default: 10000 (100%)
     pub seller_collateral_ratio: u16,   // Default: 10000 (100%)
     pub seller_reward_bps: u16,         // Default: 0 (0%)
     pub late_penalty_bps: u16,          // Default: 10000 (100%)
-    pub minimum_fill_amount: u64,       // Default: 1000
-    pub maximum_order_amount: u64,      // Default: 1e12
 }
 
 impl Default for EconomicConfig {
@@ -86,15 +86,6 @@ impl Default for TechnicalConfig {
         }
     }
 }
-
-// Account size constants for rent exemption calculations
-pub const VAULT_CONFIG_SIZE: usize = 8 + 32 + 32 + 4 + (32 * 10) + 1 + 4 + 4 + (32 * 20) + 1;
-pub const USER_BALANCE_SIZE: usize = 8 + 32 + 32 + 8 + 1;
-pub const VAULT_AUTHORITY_SIZE: usize = 8 + 32 + 8 + 32 + 1;
-pub const TRADE_CONFIG_SIZE: usize = 8 + 32 + 32 + 4 + (32 * 10) + (2 * 6) + (4 * 2) + 1 + 1;
-pub const TOKEN_MARKET_SIZE: usize = 8 + 32 + 4 + 10 + 4 + 50 + 1 + 32 + 1 + 8 + 4 + 8;
-pub const TRADE_RECORD_SIZE: usize = 8 + 32 + 32 + 32 + 32 + 32 + 8 + 8 + 8 + 8 + 8 + 1 + 1 + 32;
-pub const ORDER_STATUS_SIZE: usize = 8 + 32 + 32 + 8 + 8 + 2 + 8 + 1 + 1;
 
 #[error_code]
 pub enum SharedError {

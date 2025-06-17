@@ -91,14 +91,17 @@ pub struct CancelTrade<'info> {
     
     /// Buyer balance PDA for collateral release
     /// CHECK: Buyer balance account validated via CPI to vault program
+    #[account(mut)]
     pub buyer_balance: AccountInfo<'info>,
     
     /// Seller balance PDA for collateral release
     /// CHECK: Seller balance account validated via CPI to vault program
+    #[account(mut)]
     pub seller_balance: AccountInfo<'info>,
     
     /// Vault authority PDA
     #[account(
+        mut,
         seeds = [
             escrow_vault::state::VaultAuthority::VAULT_AUTHORITY_SEED,
             trade_record.collateral_mint.as_ref()
@@ -110,6 +113,7 @@ pub struct CancelTrade<'info> {
     
     /// Vault ATA for collateral token
     #[account(
+        mut,
         constraint = vault_ata.mint == trade_record.collateral_mint @ TradingError::TokenMintMismatch,
     )]
     pub vault_ata: Account<'info, TokenAccount>,
@@ -132,6 +136,13 @@ pub struct CancelTrade<'info> {
     
     pub token_program: Program<'info, Token>,
     pub system_program: Program<'info, System>,
+    
+    /// 🛡️ INSTRUCTION SYSVAR - For precise CPI caller detection
+    /// CHECK: Validated by constraint to ensure it's the instruction sysvar
+    #[account(
+        constraint = instruction_sysvar.key() == solana_program::sysvar::instructions::ID @ TradingError::InvalidInstructionSysvar
+    )]
+    pub instruction_sysvar: AccountInfo<'info>,
 }
 
 pub fn handler(ctx: Context<CancelTrade>) -> Result<()> {
@@ -148,6 +159,8 @@ pub fn handler(ctx: Context<CancelTrade>) -> Result<()> {
         current_time > grace_period_end,
         TradingError::GracePeriodActive
     );
+
+    msg!("Economic config: {:?}", config.economic_config);
     
     // Calculate penalty distribution
     let (penalty_amount, buyer_total, seller_remaining) = calculate_cancellation_amounts(
@@ -251,9 +264,10 @@ fn transfer_collateral_to_buyer_cpi(
         config: ctx.accounts.vault_config.to_account_info(),
         user_balance: ctx.accounts.buyer_balance.to_account_info(),
         vault_authority: ctx.accounts.vault_authority.to_account_info(),
-        vault_ata: ctx.accounts.vault_ata.to_account_info(),
-        recipient_ata: ctx.accounts.buyer_collateral_ata.to_account_info(),
+        vault_token_account: ctx.accounts.vault_ata.to_account_info(),
+        recipient_token_account: ctx.accounts.buyer_collateral_ata.to_account_info(),
         token_program: ctx.accounts.token_program.to_account_info(),
+        instruction_sysvar: ctx.accounts.instruction_sysvar.to_account_info(),
     };
     
     let cpi_program = ctx.accounts.vault_program.to_account_info();
@@ -278,9 +292,10 @@ fn transfer_collateral_to_seller_cpi(
         config: ctx.accounts.vault_config.to_account_info(),
         user_balance: ctx.accounts.seller_balance.to_account_info(),
         vault_authority: ctx.accounts.vault_authority.to_account_info(),
-        vault_ata: ctx.accounts.vault_ata.to_account_info(),
-        recipient_ata: ctx.accounts.seller_collateral_ata.to_account_info(),
+        vault_token_account: ctx.accounts.vault_ata.to_account_info(),
+        recipient_token_account: ctx.accounts.seller_collateral_ata.to_account_info(),
         token_program: ctx.accounts.token_program.to_account_info(),
+        instruction_sysvar: ctx.accounts.instruction_sysvar.to_account_info(),
     };
     
     let cpi_program = ctx.accounts.vault_program.to_account_info();
