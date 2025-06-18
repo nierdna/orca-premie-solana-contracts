@@ -40,6 +40,7 @@ import {
     SDKErrorCode,
     OperationContext
 } from "../types";
+import { createSDKError } from "../utils/error-handler";
 
 /**
  * Initialize trading system
@@ -97,10 +98,10 @@ export async function initializeTrading(
         if (error instanceof SDKError) {
             throw error;
         }
-        throw new SDKError(
+        throw createSDKError(
             SDKErrorCode.TRANSACTION_FAILED,
             "Failed to initialize trading",
-            error as Error
+            error
         );
     }
 }
@@ -137,8 +138,9 @@ export async function createTokenMarket(
 
         // CRITICAL: Set transaction parameters before partial signing
         // This ensures the tokenMarket signature is created with complete transaction message
-        const { blockhash } = await client.getConnection().getLatestBlockhash();
+        const { blockhash, lastValidBlockHeight } = await client.getConnection().getLatestBlockhash();
         transaction.recentBlockhash = blockhash;
+        transaction.lastValidBlockHeight = lastValidBlockHeight;
         transaction.feePayer = context.wallet.publicKey;
 
         // Now safe to sign with tokenMarket keypair (complete transaction message)
@@ -160,10 +162,10 @@ export async function createTokenMarket(
             fee: txDetails?.meta?.fee,
         };
     } catch (error) {
-        throw new SDKError(
+        throw createSDKError(
             SDKErrorCode.TRANSACTION_FAILED,
             "Failed to create token market",
-            error as Error
+            error
         );
     }
 }
@@ -208,10 +210,10 @@ export async function mapToken(
             fee: txDetails?.meta?.fee,
         };
     } catch (error) {
-        throw new SDKError(
+        throw createSDKError(
             SDKErrorCode.TRANSACTION_FAILED,
             "Failed to map token",
-            error as Error
+            error
         );
     }
 }
@@ -255,10 +257,10 @@ export async function manageRelayers(
             fee: txDetails?.meta?.fee,
         };
     } catch (error) {
-        throw new SDKError(
+        throw createSDKError(
             SDKErrorCode.TRANSACTION_FAILED,
             `Failed to ${isAdd ? 'add' : 'remove'} relayer`,
-            error as Error
+            error
         );
     }
 }
@@ -329,12 +331,15 @@ export async function matchOrders(
 
         // CRITICAL: Set transaction parameters before partial signing
         // This ensures the tradeRecord signature is created with complete transaction message
-        const { blockhash } = await tradingClient.getConnection().getLatestBlockhash();
+        const { blockhash, lastValidBlockHeight } = await tradingClient.getConnection().getLatestBlockhash();
         transaction.recentBlockhash = blockhash;
+        transaction.lastValidBlockHeight = lastValidBlockHeight;
         transaction.feePayer = context.wallet.publicKey;
 
         // Now safe to sign with tradeRecord keypair (complete transaction message)
         transaction.partialSign(tradeRecord);
+
+        console.log('    ✅ Transaction signed with tradeRecord ', tradeRecord.publicKey.toString());
 
         // Execute with wallet adapter (executeTransaction won't override blockhash/feePayer)
         const signature = await tradingClient.executeTransaction(transaction, context);
@@ -354,10 +359,10 @@ export async function matchOrders(
             fee: txDetails?.meta?.fee,
         };
     } catch (error) {
-        throw new SDKError(
+        throw createSDKError(
             SDKErrorCode.TRANSACTION_FAILED,
             "Failed to match orders",
-            error as Error
+            error
         );
     }
 }
@@ -381,12 +386,12 @@ export async function settleTrade(
 
         // Verify seller
         if (!tradeRecord.seller.equals(context.wallet.publicKey)) {
-            throw new SDKError(SDKErrorCode.UNAUTHORIZED, "Only the sell trader can settle this trade");
+            throw createSDKError(SDKErrorCode.UNAUTHORIZED, "Only the sell trader can settle this trade");
         }
 
         // Check if already settled
         if (tradeRecord.settled) {
-            throw new SDKError(SDKErrorCode.ALREADY_INITIALIZED, "Trade has already been settled");
+            throw createSDKError(SDKErrorCode.ALREADY_INITIALIZED, "Trade has already been settled");
         }
 
         // Get token market and real token info
@@ -466,10 +471,10 @@ export async function settleTrade(
             fee: txDetails?.meta?.fee,
         };
     } catch (error) {
-        throw new SDKError(
+        throw createSDKError(
             SDKErrorCode.TRANSACTION_FAILED,
             "Failed to settle trade",
-            error as Error
+            error
         );
     }
 }
@@ -493,12 +498,12 @@ export async function cancelTrade(
 
         // Verify buyer can cancel
         if (!tradeRecord.buyer.equals(context.wallet.publicKey)) {
-            throw new SDKError(SDKErrorCode.UNAUTHORIZED, "Only the buy trader can cancel this trade");
+            throw createSDKError(SDKErrorCode.UNAUTHORIZED, "Only the buy trader can cancel this trade");
         }
 
         // Check if already settled
         if (tradeRecord.settled) {
-            throw new SDKError(SDKErrorCode.ALREADY_INITIALIZED, "Trade has already been settled");
+            throw createSDKError(SDKErrorCode.ALREADY_INITIALIZED, "Trade has already been settled");
         }
 
         // Get token market and check grace period
@@ -507,7 +512,7 @@ export async function cancelTrade(
         const gracePeriodEnd = tradeRecord.matchTime.toNumber() + tokenMarket.settleTimeLimit;
 
         if (currentTime <= gracePeriodEnd) {
-            throw new SDKError(SDKErrorCode.INVALID_CONFIG, "Grace period has not expired yet. Cannot cancel trade.");
+            throw createSDKError(SDKErrorCode.INVALID_CONFIG, "Grace period has not expired yet. Cannot cancel trade.");
         }
 
         const collateralMint = tradeRecord.collateralMint;
@@ -569,10 +574,10 @@ export async function cancelTrade(
             fee: txDetails?.meta?.fee,
         };
     } catch (error) {
-        throw new SDKError(
+        throw createSDKError(
             SDKErrorCode.TRANSACTION_FAILED,
             "Failed to cancel trade",
-            error as Error
+            error
         );
     }
 } 

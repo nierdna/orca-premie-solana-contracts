@@ -33,6 +33,7 @@ import {
     SDKErrorCode,
     OperationContext
 } from "../types";
+import { createSDKError } from "../utils/error-handler";
 
 /**
  * Initialize vault system
@@ -50,7 +51,7 @@ export async function initializeVault(
         // Check if already initialized
         try {
             await program.account.vaultConfig.fetch(vaultConfigPDA);
-            throw new SDKError(SDKErrorCode.ALREADY_INITIALIZED, "Vault already initialized");
+            throw createSDKError(SDKErrorCode.ALREADY_INITIALIZED, "Vault already initialized");
         } catch (error) {
             if (error instanceof SDKError) {
                 throw error;
@@ -90,10 +91,10 @@ export async function initializeVault(
         if (error instanceof SDKError) {
             throw error;
         }
-        throw new SDKError(
+        throw createSDKError(
             SDKErrorCode.TRANSACTION_FAILED,
             "Failed to initialize vault",
-            error as Error
+            error
         );
     }
 }

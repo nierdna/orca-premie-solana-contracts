@@ -7,6 +7,7 @@ import { Connection, PublicKey } from "@solana/web3.js";
 import { SDKConfig, SDKError, SDKErrorCode, WalletSigner, OperationContext } from "../types";
 import { validateSDKConfig } from "./validation";
 import { getIdlByFileName, type IdlFileName } from "./idl-constants";
+import { createSDKError } from "./error-handler";
 
 export abstract class BaseClient<T extends anchor.Idl> {
     protected connection: Connection;
@@ -53,16 +54,22 @@ export abstract class BaseClient<T extends anchor.Idl> {
             // Only set blockhash and feePayer if not already set
             // This prevents overwriting values set before partial signing
             if (!transaction.recentBlockhash) {
-                const { blockhash } = await this.connection.getLatestBlockhash();
+                const { blockhash, lastValidBlockHeight } = await this.connection.getLatestBlockhash();
                 transaction.recentBlockhash = blockhash;
+                transaction.lastValidBlockHeight = lastValidBlockHeight;
             }
+            console.log('    ✅ Transaction recentBlockhash ', transaction.recentBlockhash);
+
 
             if (!transaction.feePayer) {
                 transaction.feePayer = context.wallet.publicKey;
             }
+            console.log('    ✅ Transaction feePayer ', context.wallet.publicKey.toString());
 
             // Sign transaction with wallet
             const signedTx = await context.wallet.signTransaction(transaction);
+
+            console.log('    ✅ Transaction signed ', signedTx.serialize().toString('hex'));
 
             // Send transaction
             const signature = await this.connection.sendRawTransaction(
@@ -71,19 +78,27 @@ export abstract class BaseClient<T extends anchor.Idl> {
                     skipPreflight: context.skipPreflight || false,
                 }
             );
+            console.log('    ✅ Transaction sent ', signature);
+
+            const start = Date.now();
 
             // Confirm transaction
             await this.connection.confirmTransaction(
-                signature,
-                context.commitment || 'confirmed'
+                {
+                    signature,
+                    blockhash: transaction.recentBlockhash!,
+                    lastValidBlockHeight: transaction.lastValidBlockHeight!,
+                },
             );
+
+            console.log('    ✅ Transaction confirmed in ', Date.now() - start, 'ms');
 
             return signature;
         } catch (error) {
-            throw new SDKError(
+            throw createSDKError(
                 SDKErrorCode.TRANSACTION_FAILED,
-                `Transaction execution failed: ${error}`,
-                error as Error
+                `Transaction execution failed`,
+                error
             );
         }
     }
@@ -128,10 +143,10 @@ export abstract class BaseClient<T extends anchor.Idl> {
             return this.program;
 
         } catch (error) {
-            throw new SDKError(
+            throw createSDKError(
                 SDKErrorCode.PROGRAM_LOAD_FAILED,
-                `Failed to load program: ${error}`,
-                error as Error
+                `Failed to load program`,
+                error
             );
         }
     }
@@ -157,10 +172,10 @@ export abstract class BaseClient<T extends anchor.Idl> {
 
             return this.program;
         } catch (error) {
-            throw new SDKError(
+            throw createSDKError(
                 SDKErrorCode.PROGRAM_LOAD_FAILED,
-                `Failed to load program from config: ${error}`,
-                error as Error
+                `Failed to load program from config`,
+                error
             );
         }
     }

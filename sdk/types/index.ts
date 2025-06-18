@@ -142,6 +142,12 @@ export enum SDKErrorCode {
 }
 
 export class SDKError extends Error {
+    public details?: any;
+    public logs?: string[];
+    public programId?: string;
+    public errorCode?: number;
+    public errorName?: string;
+
     constructor(
         public code: SDKErrorCode,
         public message: string,
@@ -149,6 +155,46 @@ export class SDKError extends Error {
     ) {
         super(message);
         this.name = 'SDKError';
+
+        // Preserve stack trace
+        if (Error.captureStackTrace) {
+            Error.captureStackTrace(this, SDKError);
+        }
+    }
+
+    /**
+     * Get user-friendly error message
+     */
+    getUserFriendlyMessage(): string {
+        // Import getUserFriendlyMessage function dynamically to avoid circular dependency
+        const { getUserFriendlyMessage } = require('../utils/error-handler');
+        return getUserFriendlyMessage(this);
+    }
+
+    /**
+     * Check if this error is retryable
+     */
+    isRetryable(): boolean {
+        // Import isRetryableError function dynamically to avoid circular dependency
+        const { isRetryableError } = require('../utils/error-handler');
+        return isRetryableError(this);
+    }
+
+    /**
+     * Get error as JSON for logging
+     */
+    toJSON() {
+        return {
+            name: this.name,
+            code: this.code,
+            message: this.message,
+            details: this.details,
+            logs: this.logs,
+            programId: this.programId,
+            errorCode: this.errorCode,
+            errorName: this.errorName,
+            stack: this.stack
+        };
     }
 }
 
