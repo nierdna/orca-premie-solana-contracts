@@ -3,7 +3,8 @@
  */
 
 import * as anchor from "@coral-xyz/anchor";
-import { PublicKey } from "@solana/web3.js";
+import { PublicKey, Connection } from "@solana/web3.js";
+import { getMint } from "@solana/spl-token";
 
 /**
  * Parse token amount with decimals
@@ -60,4 +61,50 @@ export function toSmallestUnit(amount: number, decimals: number = 6): anchor.BN 
  */
 export function fromSmallestUnit(amount: anchor.BN, decimals: number = 6): number {
     return amount.toNumber() / Math.pow(10, decimals);
+}
+
+/**
+ * Get token decimals from mint info
+ */
+export async function getTokenDecimals(
+    connection: Connection,
+    mintAddress: PublicKey
+): Promise<number> {
+    try {
+        const mintInfo = await getMint(connection, mintAddress);
+        return mintInfo.decimals;
+    } catch (error) {
+        console.warn(`Failed to get decimals for mint ${mintAddress.toString()}, defaulting to 6`);
+        return 6;
+    }
+}
+
+/**
+ * Parse mixed input to PublicKey
+ */
+export function parseToPublicKey(input: PublicKey | string, fieldName: string = 'address'): PublicKey {
+    if (typeof input === 'string') {
+        try {
+            return new PublicKey(input);
+        } catch (error) {
+            throw new Error(`Invalid ${fieldName}: "${input}" is not a valid PublicKey`);
+        }
+    }
+    return input;
+}
+
+/**
+ * Parse mixed input to anchor.BN with optional decimal conversion
+ */
+export function parseToAnchorBN(input: anchor.BN | number, decimals?: number): anchor.BN {
+    if (typeof input === 'number') {
+        if (decimals !== undefined) {
+            // Convert number to smallest unit with decimals
+            return new anchor.BN(input * Math.pow(10, decimals));
+        } else {
+            // Direct number to BN conversion
+            return new anchor.BN(input);
+        }
+    }
+    return input;
 } 

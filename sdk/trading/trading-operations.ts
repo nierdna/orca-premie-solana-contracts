@@ -15,7 +15,7 @@ import {
     getAssociatedTokenAddress,
     TOKEN_PROGRAM_ID,
     createAssociatedTokenAccountInstruction,
-    ASSOCIATED_TOKEN_PROGRAM_ID
+    ASSOCIATED_TOKEN_PROGRAM_ID,
 } from "@solana/spl-token";
 import { TradingClient } from "./trading-client";
 import { VaultClient } from "../vault/vault-client";
@@ -26,10 +26,12 @@ import {
     getVaultAuthorityPDA
 } from "../utils/pda";
 import { DEFAULT_ECONOMIC_CONFIG, DEFAULT_TECHNICAL_CONFIG } from "../utils/constants";
+import { parseToPublicKey, parseToAnchorBN, getTokenDecimals } from "../utils/token";
 import {
     TokenMarketParams,
     MapTokenParams,
     MatchOrdersParams,
+    PreOrder,
     TransactionResult,
     TradingInitResult,
     TokenMarketResult,
@@ -41,6 +43,65 @@ import {
     OperationContext
 } from "../types";
 import { createSDKError } from "../utils/error-handler";
+
+/**
+ * Helper function: Parse PreOrder with automatic decimal detection
+ */
+async function parsePreOrder(
+    order: PreOrder,
+    connection: any,
+    fieldPrefix: string = 'order'
+): Promise<{
+    trader: PublicKey;
+    collateralToken: PublicKey;
+    tokenId: PublicKey;
+    amount: anchor.BN;
+    price: anchor.BN;
+    isBuy: boolean;
+    nonce: anchor.BN;
+    deadline: anchor.BN;
+}> {
+    try {
+        // Parse addresses
+        const trader = parseToPublicKey(order.trader, `${fieldPrefix}.trader`);
+        const collateralToken = parseToPublicKey(order.collateralToken, `${fieldPrefix}.collateralToken`);
+        const tokenId = parseToPublicKey(order.tokenId, `${fieldPrefix}.tokenId`);
+
+        // Get collateral token decimals for amount parsing
+        let collateralDecimals = 6; // Default
+        if (typeof order.amount === 'number' || typeof order.collateralToken === 'string') {
+            try {
+                collateralDecimals = await getTokenDecimals(connection, collateralToken);
+                console.log(`📊 Detected ${collateralDecimals} decimals for collateral token ${collateralToken.toString()}`);
+            } catch (error) {
+                console.warn(`⚠️ Failed to get mint info for ${collateralToken.toString()}, using default 6 decimals`);
+            }
+        }
+
+        // Parse amounts
+        const amount = parseToAnchorBN(order.amount, typeof order.amount === 'number' ? collateralDecimals : undefined);
+        const price = parseToAnchorBN(order.price, typeof order.price === 'number' ? 6 : undefined); // Price always 6 decimals
+        const nonce = parseToAnchorBN(order.nonce);
+        const deadline = parseToAnchorBN(order.deadline);
+
+        return {
+            trader,
+            collateralToken,
+            tokenId,
+            amount,
+            price,
+            isBuy: order.isBuy,
+            nonce,
+            deadline
+        };
+    } catch (error) {
+        throw createSDKError(
+            SDKErrorCode.INVALID_CONFIG,
+            `Failed to parse ${fieldPrefix}: ${error instanceof Error ? error.message : 'Unknown error'}`,
+            error as Error
+        );
+    }
+}
 
 /**
  * Initialize trading system
@@ -266,7 +327,7 @@ export async function manageRelayers(
 }
 
 /**
- * Match buy and sell orders
+ * Match buy and sell orders (Enhanced with automatic parsing)
  */
 export async function matchOrders(
     tradingClient: TradingClient,
@@ -279,32 +340,61 @@ export async function matchOrders(
         const tradingProgram = await tradingClient.getProgram(provider);
         const tradingProgramId = tradingClient.getConfig().tradingProgramId;
         const vaultProgramId = vaultClient.getConfig().vaultProgramId;
+        const connection = tradingClient.getConnection();
 
-        // Generate trade record keypair (this is the key insight!)
+        console.log('🔄 Parsing order inputs...');
+
+        // Parse orders with automatic decimal detection
+        const parsedBuyOrder = await parsePreOrder(params.buyOrder, connection, 'buyOrder');
+        const parsedSellOrder = await parsePreOrder(params.sellOrder, connection, 'sellOrder');
+
+        console.log('✅ Orders parsed successfully');
+        console.log(`   Buy: ${parsedBuyOrder.amount.toString()} tokens at ${parsedBuyOrder.price.toString()} price`);
+        console.log(`   Sell: ${parsedSellOrder.amount.toString()} tokens at ${parsedSellOrder.price.toString()} price`);
+
+        // Generate trade record keypair
         const tradeRecord = Keypair.generate();
 
         // Get PDAs
         const [tradeConfigPDA] = getTradeConfigPDA(tradingProgramId);
-        const [buyUserBalancePDA] = getUserBalancePDA(vaultProgramId, params.buyOrder.trader, params.buyOrder.collateralToken);
-        const [sellUserBalancePDA] = getUserBalancePDA(vaultProgramId, params.sellOrder.trader, params.sellOrder.collateralToken);
+        const [buyUserBalancePDA] = getUserBalancePDA(vaultProgramId, parsedBuyOrder.trader, parsedBuyOrder.collateralToken);
+        const [sellUserBalancePDA] = getUserBalancePDA(vaultProgramId, parsedSellOrder.trader, parsedSellOrder.collateralToken);
         const [vaultConfigPDA] = getVaultConfigPDA(vaultProgramId);
-        const [vaultAuthorityPDA] = getVaultAuthorityPDA(vaultProgramId, params.buyOrder.collateralToken);
+        const [vaultAuthorityPDA] = getVaultAuthorityPDA(vaultProgramId, parsedBuyOrder.collateralToken);
 
         // Get token accounts
-        const buyerCollateralAta = await getAssociatedTokenAddress(params.buyOrder.collateralToken, params.buyOrder.trader);
-        const sellerCollateralAta = await getAssociatedTokenAddress(params.sellOrder.collateralToken, params.sellOrder.trader);
+        const buyerCollateralAta = await getAssociatedTokenAddress(parsedBuyOrder.collateralToken, parsedBuyOrder.trader);
+        const sellerCollateralAta = await getAssociatedTokenAddress(parsedSellOrder.collateralToken, parsedSellOrder.trader);
 
-        // Build instruction
+        // Parse fillAmount if provided
+        let fillAmount: anchor.BN | null = null;
+        if (params.fillAmount !== undefined) {
+            if (typeof params.fillAmount === 'number') {
+                // Get collateral token decimals for fill amount parsing
+                let collateralDecimals = 6;
+                try {
+                    collateralDecimals = await getTokenDecimals(connection, parsedBuyOrder.collateralToken);
+                } catch (error) {
+                    console.warn(`Failed to get mint info for fill amount, using default 6 decimals`);
+                }
+                fillAmount = parseToAnchorBN(params.fillAmount, collateralDecimals);
+            } else {
+                fillAmount = params.fillAmount;
+            }
+            console.log(`📊 Fill amount: ${fillAmount.toString()}`);
+        }
+
+        // Build instruction with parsed orders
         const ix = await tradingProgram.methods
             .matchOrders(
-                params.buyOrder,
-                params.sellOrder,
-                params.fillAmount || null
+                parsedBuyOrder,
+                parsedSellOrder,
+                fillAmount
             )
             .accounts({
-                relayer: context.wallet.publicKey, // from context now
+                relayer: context.wallet.publicKey,
                 tradeRecord: tradeRecord.publicKey,
-                tokenMarket: params.buyOrder.tokenId,
+                tokenMarket: parsedBuyOrder.tokenId,
                 config: tradeConfigPDA,
                 buyerBalance: buyUserBalancePDA,
                 sellerBalance: sellUserBalancePDA,
@@ -330,18 +420,17 @@ export async function matchOrders(
         );
 
         // CRITICAL: Set transaction parameters before partial signing
-        // This ensures the tradeRecord signature is created with complete transaction message
-        const { blockhash, lastValidBlockHeight } = await tradingClient.getConnection().getLatestBlockhash();
+        const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash();
         transaction.recentBlockhash = blockhash;
         transaction.lastValidBlockHeight = lastValidBlockHeight;
         transaction.feePayer = context.wallet.publicKey;
 
-        // Now safe to sign with tradeRecord keypair (complete transaction message)
+        // Sign with tradeRecord keypair
         transaction.partialSign(tradeRecord);
 
         console.log('    ✅ Transaction signed with tradeRecord ', tradeRecord.publicKey.toString());
 
-        // Execute with wallet adapter (executeTransaction won't override blockhash/feePayer)
+        // Execute transaction
         const signature = await tradingClient.executeTransaction(transaction, context);
 
         // Get transaction details
@@ -350,10 +439,10 @@ export async function matchOrders(
         return {
             signature,
             tradeRecord: tradeRecord.publicKey,
-            buyTrader: params.buyOrder.trader,
-            sellTrader: params.sellOrder.trader,
-            amount: params.fillAmount || params.buyOrder.amount,
-            price: params.buyOrder.price,
+            buyTrader: parsedBuyOrder.trader,
+            sellTrader: parsedSellOrder.trader,
+            amount: fillAmount || parsedBuyOrder.amount,
+            price: parsedBuyOrder.price,
             slot: txDetails?.slot,
             blockTime: txDetails?.blockTime ? txDetails.blockTime * 1000 : undefined,
             fee: txDetails?.meta?.fee,

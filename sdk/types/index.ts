@@ -74,14 +74,14 @@ export interface MapTokenParams {
 
 // ===== Order Types =====
 export interface PreOrder {
-    trader: PublicKey;
-    collateralToken: PublicKey;
-    tokenId: PublicKey; // TokenMarket address
-    amount: anchor.BN;
-    price: anchor.BN;
+    trader: PublicKey | string;
+    collateralToken: PublicKey | string;
+    tokenId: PublicKey | string; // TokenMarket address
+    amount: anchor.BN | number;
+    price: anchor.BN | number;
     isBuy: boolean;
-    nonce: anchor.BN;
-    deadline: anchor.BN;
+    nonce: anchor.BN | number;
+    deadline: anchor.BN | number;
 }
 
 export interface OrderSignature {
@@ -92,7 +92,7 @@ export interface OrderSignature {
 export interface MatchOrdersParams {
     buyOrder: PreOrder;
     sellOrder: PreOrder;
-    fillAmount?: anchor.BN;
+    fillAmount?: anchor.BN | number;
 }
 
 // ===== Result Types =====

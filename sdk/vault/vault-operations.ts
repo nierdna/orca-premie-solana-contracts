@@ -232,7 +232,7 @@ export async function depositCollateral(
             fee: txDetails?.meta?.fee,
         };
     } catch (error) {
-        throw new SDKError(
+        throw createSDKError(
             SDKErrorCode.TRANSACTION_FAILED,
             "Failed to deposit collateral",
             error as Error
@@ -308,10 +308,7 @@ export async function withdrawCollateral(
             fee: txDetails?.meta?.fee,
         };
     } catch (error) {
-        if (error instanceof SDKError) {
-            throw error;
-        }
-        throw new SDKError(
+        throw createSDKError(
             SDKErrorCode.TRANSACTION_FAILED,
             "Failed to withdraw collateral",
             error as Error

@@ -1,7 +1,9 @@
 "use client";
 
 import { useTrading } from "@/hooks/useTrading";
+import { useVault } from "@/hooks/useVault";
 import { WalletMultiButton } from "@solana/wallet-adapter-react-ui";
+import { useWallet } from "@solana/wallet-adapter-react";
 import { useState } from "react";
 import { PublicKey } from "@solana/web3.js";
 import * as anchor from "@coral-xyz/anchor";
@@ -16,10 +18,20 @@ export function TradingDemo() {
     isConnected,
   } = useTrading();
 
+  const { depositCollateral, withdrawCollateral } = useVault();
+  const wallet = useWallet();
+
   const [isLoading, setIsLoading] = useState(false);
   const [result, setResult] = useState<any>(null);
   const [activeTab, setActiveTab] = useState<
-    "create" | "map" | "match" | "settle" | "cancel"
+    | "create"
+    | "map"
+    | "match"
+    | "settle"
+    | "cancel"
+    | "deposit"
+    | "withdraw"
+    | "balance"
   >("create");
 
   // Form states
@@ -54,6 +66,22 @@ export function TradingDemo() {
 
   const [cancelTradeForm, setCancelTradeForm] = useState({
     tradeRecord: "",
+  });
+
+  // Vault form states
+  const [depositForm, setDepositForm] = useState({
+    tokenMint: "5FPTnHuxwyqSpuRdjQwaemi8YoW5KT7CeMWQ55v6mCef", // USDC mainnet
+    amount: "100",
+  });
+
+  const [withdrawForm, setWithdrawForm] = useState({
+    tokenMint: "5FPTnHuxwyqSpuRdjQwaemi8YoW5KT7CeMWQ55v6mCef", // USDC mainnet
+    amount: "50",
+  });
+
+  const [balanceForm, setBalanceForm] = useState({
+    userPubkey: "",
+    tokenMint: "5FPTnHuxwyqSpuRdjQwaemi8YoW5KT7CeMWQ55v6mCef", // USDC mainnet
   });
 
   const handleCreateMarket = async () => {
@@ -113,29 +141,25 @@ export function TradingDemo() {
       const currentTime = Math.floor(Date.now() / 1000);
 
       const buyOrder = {
-        trader: new PublicKey(matchOrdersForm.buyOrderUser),
-        collateralToken: new PublicKey(matchOrdersForm.buyOrderCollateralToken),
-        tokenId: new PublicKey(matchOrdersForm.buyOrderTokenMarket),
-        amount: new anchor.BN(Number(matchOrdersForm.buyOrderAmount) * 10 ** 6),
-        price: new anchor.BN(Number(matchOrdersForm.buyOrderPrice) * 10 ** 6),
+        trader: matchOrdersForm.buyOrderUser,
+        collateralToken: matchOrdersForm.buyOrderCollateralToken,
+        tokenId: matchOrdersForm.buyOrderTokenMarket,
+        amount: Number(matchOrdersForm.buyOrderAmount),
+        price: Number(matchOrdersForm.buyOrderPrice),
         isBuy: true,
-        nonce: new anchor.BN(Math.floor(Math.random() * 1000000)),
-        deadline: new anchor.BN(currentTime + 86400), // 1 day from now
+        nonce: Math.floor(Math.random() * 1000000),
+        deadline: currentTime + 86400, // 1 day from now
       };
 
       const sellOrder = {
-        trader: new PublicKey(matchOrdersForm.sellOrderUser),
-        collateralToken: new PublicKey(
-          matchOrdersForm.sellOrderCollateralToken
-        ),
-        tokenId: new PublicKey(matchOrdersForm.sellOrderTokenMarket),
-        amount: new anchor.BN(
-          Number(matchOrdersForm.sellOrderAmount) * 10 ** 6
-        ),
-        price: new anchor.BN(Number(matchOrdersForm.sellOrderPrice) * 10 ** 6),
+        trader: matchOrdersForm.sellOrderUser,
+        collateralToken: matchOrdersForm.sellOrderCollateralToken,
+        tokenId: matchOrdersForm.sellOrderTokenMarket,
+        amount: Number(matchOrdersForm.sellOrderAmount),
+        price: Number(matchOrdersForm.sellOrderPrice),
         isBuy: false,
-        nonce: new anchor.BN(Math.floor(Math.random() * 1000000)),
-        deadline: new anchor.BN(currentTime + 86400), // 1 day from now
+        nonce: Math.floor(Math.random() * 1000000),
+        deadline: currentTime + 86400, // 1 day from now
       };
 
       const result = await matchOrders({ buyOrder, sellOrder });
@@ -212,12 +236,102 @@ export function TradingDemo() {
     }
   };
 
+  // Vault handlers
+  const handleDepositCollateral = async () => {
+    setIsLoading(true);
+    setResult(null);
+    try {
+      const result = await depositCollateral({
+        tokenMint: depositForm.tokenMint,
+        amount: parseFloat(depositForm.amount),
+      });
+      setResult({
+        type: "depositCollateral",
+        data: {
+          signature: result.signature?.toString() || "N/A",
+          tokenMint: depositForm.tokenMint,
+          amount: depositForm.amount,
+        },
+      });
+      console.log("Collateral deposited:", result);
+    } catch (error) {
+      console.error("Error depositing collateral:", error);
+      const errorMessage =
+        error instanceof Error ? error.message : "Unknown error occurred";
+      setResult({ type: "error", message: errorMessage });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleWithdrawCollateral = async () => {
+    setIsLoading(true);
+    setResult(null);
+    try {
+      const result = await withdrawCollateral({
+        tokenMint: withdrawForm.tokenMint,
+        amount: parseFloat(withdrawForm.amount),
+      });
+      setResult({
+        type: "withdrawCollateral",
+        data: {
+          signature: result.signature?.toString() || "N/A",
+          tokenMint: withdrawForm.tokenMint,
+          amount: withdrawForm.amount,
+        },
+      });
+      console.log("Collateral withdrawn:", result);
+    } catch (error) {
+      console.error("Error withdrawing collateral:", error);
+      const errorMessage =
+        error instanceof Error ? error.message : "Unknown error occurred";
+      setResult({ type: "error", message: errorMessage });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleCheckBalance = async () => {
+    setIsLoading(true);
+    setResult(null);
+    try {
+      // Placeholder for balance check - will need SDK function
+      console.log("Checking balance for:", balanceForm);
+      setResult({
+        type: "checkBalance",
+        data: {
+          userPubkey: balanceForm.userPubkey,
+          tokenMint: balanceForm.tokenMint,
+          balance: "Balance check not implemented yet",
+        },
+      });
+    } catch (error) {
+      console.error("Error checking balance:", error);
+      const errorMessage =
+        error instanceof Error ? error.message : "Unknown error occurred";
+      setResult({ type: "error", message: errorMessage });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const tabs = [
     { id: "create", label: "Create Market", icon: "🏭" },
     { id: "map", label: "Map Token", icon: "🗺️" },
     { id: "match", label: "Match Orders", icon: "🤝" },
     { id: "settle", label: "Settle Trade", icon: "✅" },
     { id: "cancel", label: "Cancel Trade", icon: "❌" },
+    { id: "deposit", label: "Deposit Collateral", icon: "💰" },
+    { id: "withdraw", label: "Withdraw Collateral", icon: "💸" },
+    { id: "balance", label: "Check Balance", icon: "💹" },
+  ];
+
+  const commonTokens = [
+    {
+      name: "USDC",
+      mint: "5FPTnHuxwyqSpuRdjQwaemi8YoW5KT7CeMWQ55v6mCef",
+      symbol: "USDC",
+    },
   ];
 
   return (
@@ -669,6 +783,290 @@ export function TradingDemo() {
               className="w-full bg-red-500 text-white px-4 py-2 rounded-lg disabled:opacity-50 hover:bg-red-600 transition-colors"
             >
               {isLoading ? "Cancelling..." : "Cancel Trade"}
+            </button>
+          </div>
+        )}
+
+        {/* Deposit Collateral Tab */}
+        {activeTab === "deposit" && (
+          <div className="space-y-4">
+            <h2 className="text-xl font-semibold mb-4 text-gray-800">
+              Deposit Collateral
+            </h2>
+            <div className="bg-blue-50 p-4 rounded-lg mb-4">
+              <p className="text-blue-800 text-sm">
+                💡 <strong>Ghi chú:</strong> Deposit collateral để có thể tham
+                gia trading. Amount sẽ được scale với 6 decimals (micro-units).
+              </p>
+            </div>
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium mb-2 text-gray-700">
+                  Token Mint Address
+                </label>
+                <div className="flex space-x-2 mb-2">
+                  {commonTokens.map((token) => (
+                    <button
+                      key={token.mint}
+                      onClick={() =>
+                        setDepositForm({
+                          ...depositForm,
+                          tokenMint: token.mint,
+                        })
+                      }
+                      className={`px-3 py-1 rounded-full text-xs ${
+                        depositForm.tokenMint === token.mint
+                          ? "bg-blue-500 text-white"
+                          : "bg-gray-200 text-gray-700 hover:bg-gray-300"
+                      }`}
+                    >
+                      {token.symbol}
+                    </button>
+                  ))}
+                </div>
+                <input
+                  type="text"
+                  value={depositForm.tokenMint}
+                  onChange={(e) =>
+                    setDepositForm({
+                      ...depositForm,
+                      tokenMint: e.target.value,
+                    })
+                  }
+                  className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
+                  placeholder="Token Mint Public Key"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium mb-2 text-gray-700">
+                  Amount
+                </label>
+                <input
+                  type="number"
+                  value={depositForm.amount}
+                  onChange={(e) =>
+                    setDepositForm({
+                      ...depositForm,
+                      amount: e.target.value,
+                    })
+                  }
+                  className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
+                  placeholder="Amount to deposit"
+                  step="0.000001"
+                  min="0"
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  Actual amount:{" "}
+                  {parseFloat(depositForm.amount || "0") * 1000000} micro-units
+                </p>
+              </div>
+            </div>
+
+            <button
+              onClick={handleDepositCollateral}
+              disabled={
+                isLoading ||
+                !isConnected ||
+                !depositForm.tokenMint ||
+                !depositForm.amount
+              }
+              className="w-full bg-green-500 text-white px-4 py-2 rounded-lg disabled:opacity-50 hover:bg-green-600 transition-colors"
+            >
+              {isLoading ? "Depositing..." : "Deposit Collateral"}
+            </button>
+          </div>
+        )}
+
+        {/* Withdraw Collateral Tab */}
+        {activeTab === "withdraw" && (
+          <div className="space-y-4">
+            <h2 className="text-xl font-semibold mb-4 text-gray-800">
+              Withdraw Collateral
+            </h2>
+            <div className="bg-red-50 p-4 rounded-lg mb-4">
+              <p className="text-red-800 text-sm">
+                ⚠️ <strong>Cảnh báo:</strong> Chỉ withdraw collateral không bị
+                lock trong trades. Kiểm tra balance trước khi withdraw.
+              </p>
+            </div>
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium mb-2 text-gray-700">
+                  Token Mint Address
+                </label>
+                <div className="flex space-x-2 mb-2">
+                  {commonTokens.map((token) => (
+                    <button
+                      key={token.mint}
+                      onClick={() =>
+                        setWithdrawForm({
+                          ...withdrawForm,
+                          tokenMint: token.mint,
+                        })
+                      }
+                      className={`px-3 py-1 rounded-full text-xs ${
+                        withdrawForm.tokenMint === token.mint
+                          ? "bg-red-500 text-white"
+                          : "bg-gray-200 text-gray-700 hover:bg-gray-300"
+                      }`}
+                    >
+                      {token.symbol}
+                    </button>
+                  ))}
+                </div>
+                <input
+                  type="text"
+                  value={withdrawForm.tokenMint}
+                  onChange={(e) =>
+                    setWithdrawForm({
+                      ...withdrawForm,
+                      tokenMint: e.target.value,
+                    })
+                  }
+                  className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 text-gray-900"
+                  placeholder="Token Mint Public Key"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium mb-2 text-gray-700">
+                  Amount
+                </label>
+                <input
+                  type="number"
+                  value={withdrawForm.amount}
+                  onChange={(e) =>
+                    setWithdrawForm({
+                      ...withdrawForm,
+                      amount: e.target.value,
+                    })
+                  }
+                  className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 text-gray-900"
+                  placeholder="Amount to withdraw"
+                  step="0.000001"
+                  min="0"
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  Actual amount:{" "}
+                  {parseFloat(withdrawForm.amount || "0") * 1000000} micro-units
+                </p>
+              </div>
+            </div>
+
+            <button
+              onClick={handleWithdrawCollateral}
+              disabled={
+                isLoading ||
+                !isConnected ||
+                !withdrawForm.tokenMint ||
+                !withdrawForm.amount
+              }
+              className="w-full bg-red-500 text-white px-4 py-2 rounded-lg disabled:opacity-50 hover:bg-red-600 transition-colors"
+            >
+              {isLoading ? "Withdrawing..." : "Withdraw Collateral"}
+            </button>
+          </div>
+        )}
+
+        {/* Check Balance Tab */}
+        {activeTab === "balance" && (
+          <div className="space-y-4">
+            <h2 className="text-xl font-semibold mb-4 text-gray-800">
+              Check Vault Balance
+            </h2>
+            <div className="bg-blue-50 p-4 rounded-lg mb-4">
+              <p className="text-blue-800 text-sm">
+                💡 <strong>Ghi chú:</strong> Kiểm tra balance của user trong
+                vault. Bao gồm cả available balance và locked balance trong
+                trades.
+              </p>
+            </div>
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium mb-2 text-gray-700">
+                  User Public Key
+                </label>
+                <input
+                  type="text"
+                  value={balanceForm.userPubkey}
+                  onChange={(e) =>
+                    setBalanceForm({
+                      ...balanceForm,
+                      userPubkey: e.target.value,
+                    })
+                  }
+                  className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
+                  placeholder="User Wallet Address"
+                />
+                <div className="flex justify-between items-center mt-2">
+                  <p className="text-xs text-gray-500">
+                    Leave empty to check your own balance
+                  </p>
+                  <button
+                    onClick={() => {
+                      if (wallet.publicKey) {
+                        setBalanceForm({
+                          ...balanceForm,
+                          userPubkey: wallet.publicKey.toString(),
+                        });
+                      }
+                    }}
+                    className="text-xs bg-gray-200 px-2 py-1 rounded hover:bg-gray-300"
+                  >
+                    Use My Wallet
+                  </button>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium mb-2 text-gray-700">
+                  Token Mint Address
+                </label>
+                <div className="flex space-x-2 mb-2">
+                  {commonTokens.map((token) => (
+                    <button
+                      key={token.mint}
+                      onClick={() =>
+                        setBalanceForm({
+                          ...balanceForm,
+                          tokenMint: token.mint,
+                        })
+                      }
+                      className={`px-3 py-1 rounded-full text-xs ${
+                        balanceForm.tokenMint === token.mint
+                          ? "bg-blue-500 text-white"
+                          : "bg-gray-200 text-gray-700 hover:bg-gray-300"
+                      }`}
+                    >
+                      {token.symbol}
+                    </button>
+                  ))}
+                </div>
+                <input
+                  type="text"
+                  value={balanceForm.tokenMint}
+                  onChange={(e) =>
+                    setBalanceForm({
+                      ...balanceForm,
+                      tokenMint: e.target.value,
+                    })
+                  }
+                  className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
+                  placeholder="Token Mint Public Key"
+                />
+              </div>
+            </div>
+
+            <button
+              onClick={handleCheckBalance}
+              disabled={isLoading || !isConnected || !balanceForm.tokenMint}
+              className="w-full bg-blue-500 text-white px-4 py-2 rounded-lg disabled:opacity-50 hover:bg-blue-600 transition-colors"
+            >
+              {isLoading ? "Checking..." : "Check Balance"}
             </button>
           </div>
         )}
