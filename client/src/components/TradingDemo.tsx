@@ -35,16 +35,16 @@ export function TradingDemo() {
   });
 
   const [matchOrdersForm, setMatchOrdersForm] = useState({
-    buyOrderUser: "",
-    buyOrderAmount: "",
-    buyOrderPrice: "",
+    buyOrderUser: "HUDgGB3ijjugFFpqzk7U78UsVGYooTWT9GJocihic4EJ",
+    buyOrderAmount: "10",
+    buyOrderPrice: "0.5",
     buyOrderTokenMarket: "",
-    buyOrderCollateralToken: "",
-    sellOrderUser: "",
-    sellOrderAmount: "",
-    sellOrderPrice: "",
+    buyOrderCollateralToken: "5FPTnHuxwyqSpuRdjQwaemi8YoW5KT7CeMWQ55v6mCef",
+    sellOrderUser: "BEVgbET4HrTvnsCkpgkCvHuJPjHv3eZ49EUMdnXjh8X9",
+    sellOrderAmount: "10",
+    sellOrderPrice: "0.5",
     sellOrderTokenMarket: "",
-    sellOrderCollateralToken: "",
+    sellOrderCollateralToken: "5FPTnHuxwyqSpuRdjQwaemi8YoW5KT7CeMWQ55v6mCef",
   });
 
   const [settleTradeForm, setSettleTradeForm] = useState({
@@ -116,8 +116,8 @@ export function TradingDemo() {
         trader: new PublicKey(matchOrdersForm.buyOrderUser),
         collateralToken: new PublicKey(matchOrdersForm.buyOrderCollateralToken),
         tokenId: new PublicKey(matchOrdersForm.buyOrderTokenMarket),
-        amount: new anchor.BN(matchOrdersForm.buyOrderAmount),
-        price: new anchor.BN(matchOrdersForm.buyOrderPrice),
+        amount: new anchor.BN(Number(matchOrdersForm.buyOrderAmount) * 10 ** 6),
+        price: new anchor.BN(Number(matchOrdersForm.buyOrderPrice) * 10 ** 6),
         isBuy: true,
         nonce: new anchor.BN(Math.floor(Math.random() * 1000000)),
         deadline: new anchor.BN(currentTime + 86400), // 1 day from now
@@ -129,8 +129,10 @@ export function TradingDemo() {
           matchOrdersForm.sellOrderCollateralToken
         ),
         tokenId: new PublicKey(matchOrdersForm.sellOrderTokenMarket),
-        amount: new anchor.BN(matchOrdersForm.sellOrderAmount),
-        price: new anchor.BN(matchOrdersForm.sellOrderPrice),
+        amount: new anchor.BN(
+          Number(matchOrdersForm.sellOrderAmount) * 10 ** 6
+        ),
+        price: new anchor.BN(Number(matchOrdersForm.sellOrderPrice) * 10 ** 6),
         isBuy: false,
         nonce: new anchor.BN(Math.floor(Math.random() * 1000000)),
         deadline: new anchor.BN(currentTime + 86400), // 1 day from now
