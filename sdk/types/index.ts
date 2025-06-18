@@ -92,8 +92,6 @@ export interface OrderSignature {
 export interface MatchOrdersParams {
     buyOrder: PreOrder;
     sellOrder: PreOrder;
-    buySignature: number[];
-    sellSignature: number[];
     fillAmount?: anchor.BN;
 }
 
