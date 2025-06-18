@@ -18,7 +18,12 @@
     "vault:init": "npx ts-node scripts/01-initialize-vault.ts",
     "vault:add-trader": "npx ts-node scripts/02-add-authorized-trader.ts",
     "vault:deposit": "npx ts-node scripts/03-deposit-collateral.ts",
-    "vault:withdraw": "npx ts-node scripts/04-withdraw-collateral.ts"
+    "vault:withdraw": "npx ts-node scripts/04-withdraw-collateral.ts",
+    "dev:client": "pnpm --filter @orca/trading-client dev",
+    "build:sdk": "pnpm --filter @orca/solana-trading-sdk build",
+    "dev:sdk": "pnpm --filter @orca/solana-trading-sdk dev",
+    "install:all": "pnpm install",
+    "client:build": "pnpm --filter @orca/trading-client build"
   },
   "dependencies": {
     "@coral-xyz/anchor": "^0.29.0",
