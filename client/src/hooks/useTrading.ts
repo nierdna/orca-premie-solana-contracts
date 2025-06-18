@@ -1,5 +1,5 @@
 import { useConnection, useWallet } from '@solana/wallet-adapter-react';
-// import { OrcaSDK, createTokenMarket, KeypairWallet } from '@orca/solana-trading-sdk';
+import { OrcaSDK, createTokenMarket, AdapterWallet } from '@orca/solana-trading-sdk';
 import { useMemo } from 'react';
 
 export function useTrading() {
@@ -8,11 +8,10 @@ export function useTrading() {
 
     // Placeholder for SDK - will be uncommented after dependencies are installed
     const sdk = useMemo(() => {
-        // return OrcaSDK.create({
-        //     network: 'devnet',
-        //     connection
-        // });
-        return null;
+        return OrcaSDK.create({
+            network: 'devnet',
+            usePreloadedIdls: true,
+        });
     }, [connection]);
 
     const createMarket = async (params: {
@@ -27,19 +26,12 @@ export function useTrading() {
         // Placeholder implementation
         console.log('Creating market with params:', params);
 
-        // const walletAdapter = new KeypairWallet(wallet as any);
-        // return await createTokenMarket(
-        //     sdk.trading,
-        //     { wallet: walletAdapter },
-        //     params
-        // );
-
-        return {
-            signature: 'placeholder-signature',
-            tokenMarket: 'placeholder-address',
-            symbol: params.symbol,
-            name: params.name
-        };
+        const walletAdapter = new AdapterWallet(wallet);
+        return await createTokenMarket(
+            sdk.trading,
+            { wallet: walletAdapter },
+            params
+        );
     };
 
     return {

@@ -18,7 +18,13 @@ export function TradingDemo() {
         name: "Demo Token Market",
         settleTimeLimit: 86400,
       });
-      setResult(result);
+      setResult({
+        tokenMarket: result.tokenMarket.toString(),
+        symbol: result.symbol.toString(),
+        name: result.name.toString(),
+        signature: result.signature.toString(),
+        fee: result.fee?.toString() || "0",
+      });
       console.log("Market created:", result);
     } catch (error) {
       console.error("Error:", error);
@@ -54,6 +60,8 @@ export function TradingDemo() {
             <p className="text-green-700">Address: {result.tokenMarket}</p>
             <p className="text-green-700">Symbol: {result.symbol}</p>
             <p className="text-green-700">Name: {result.name}</p>
+            <p className="text-green-700">Signature: {result.signature}</p>
+            <p className="text-green-700">Fee: {result.fee}</p>
           </div>
         )}
       </div>

@@ -19,6 +19,7 @@ async function createTokenMarketExample() {
     // 1. Tạo SDK instance
     const sdk = OrcaSDK.create({
         network: 'devnet',
+        usePreloadedIdls: true
     });
 
     // 2. Đọc admin keypair từ file deployer.json
