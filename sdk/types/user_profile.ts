@@ -1,0 +1,289 @@
+export type UserProfile = {
+  "version": "0.1.0",
+  "name": "user_profile",
+  "instructions": [
+    {
+      "name": "initializeProfile",
+      "docs": [
+        "# Instruction: initialize_profile",
+        "Initializes user profile with PDA",
+        "Accounts:",
+        "- [signer] user: User authority",
+        "- [writable] profile: User profile PDA account",
+        "- system_program: System program for account creation"
+      ],
+      "accounts": [
+        {
+          "name": "profile",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "user",
+          "isMut": true,
+          "isSigner": true
+        },
+        {
+          "name": "systemProgram",
+          "isMut": false,
+          "isSigner": false
+        }
+      ],
+      "args": [
+        {
+          "name": "name",
+          "type": "string"
+        }
+      ]
+    },
+    {
+      "name": "updateProfile",
+      "docs": [
+        "# Instruction: update_profile",
+        "Updates user profile data",
+        "Accounts:",
+        "- [signer] user: User authority (must match profile authority)",
+        "- [writable] profile: User profile PDA account"
+      ],
+      "accounts": [
+        {
+          "name": "profile",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "user",
+          "isMut": true,
+          "isSigner": true
+        }
+      ],
+      "args": [
+        {
+          "name": "newName",
+          "type": "string"
+        }
+      ]
+    },
+    {
+      "name": "closeProfile",
+      "docs": [
+        "# Instruction: close_profile",
+        "Closes user profile and returns rent",
+        "Accounts:",
+        "- [signer] user: User authority",
+        "- [writable] profile: User profile PDA account"
+      ],
+      "accounts": [
+        {
+          "name": "profile",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "user",
+          "isMut": true,
+          "isSigner": true
+        }
+      ],
+      "args": []
+    }
+  ],
+  "accounts": [
+    {
+      "name": "userProfile",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "authority",
+            "type": "publicKey"
+          },
+          {
+            "name": "name",
+            "type": "string"
+          },
+          {
+            "name": "createdAt",
+            "type": "i64"
+          },
+          {
+            "name": "updatedAt",
+            "type": {
+              "option": "i64"
+            }
+          },
+          {
+            "name": "version",
+            "type": "u8"
+          },
+          {
+            "name": "bump",
+            "type": "u8"
+          }
+        ]
+      }
+    }
+  ],
+  "errors": [
+    {
+      "code": 6000,
+      "name": "NameTooLong",
+      "msg": "Name is too long. Maximum 32 characters allowed."
+    },
+    {
+      "code": 6001,
+      "name": "NameEmpty",
+      "msg": "Name cannot be empty."
+    },
+    {
+      "code": 6002,
+      "name": "Unauthorized",
+      "msg": "Unauthorized: You are not the authority of this profile."
+    }
+  ]
+};
+
+export const IDL: UserProfile = {
+  "version": "0.1.0",
+  "name": "user_profile",
+  "instructions": [
+    {
+      "name": "initializeProfile",
+      "docs": [
+        "# Instruction: initialize_profile",
+        "Initializes user profile with PDA",
+        "Accounts:",
+        "- [signer] user: User authority",
+        "- [writable] profile: User profile PDA account",
+        "- system_program: System program for account creation"
+      ],
+      "accounts": [
+        {
+          "name": "profile",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "user",
+          "isMut": true,
+          "isSigner": true
+        },
+        {
+          "name": "systemProgram",
+          "isMut": false,
+          "isSigner": false
+        }
+      ],
+      "args": [
+        {
+          "name": "name",
+          "type": "string"
+        }
+      ]
+    },
+    {
+      "name": "updateProfile",
+      "docs": [
+        "# Instruction: update_profile",
+        "Updates user profile data",
+        "Accounts:",
+        "- [signer] user: User authority (must match profile authority)",
+        "- [writable] profile: User profile PDA account"
+      ],
+      "accounts": [
+        {
+          "name": "profile",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "user",
+          "isMut": true,
+          "isSigner": true
+        }
+      ],
+      "args": [
+        {
+          "name": "newName",
+          "type": "string"
+        }
+      ]
+    },
+    {
+      "name": "closeProfile",
+      "docs": [
+        "# Instruction: close_profile",
+        "Closes user profile and returns rent",
+        "Accounts:",
+        "- [signer] user: User authority",
+        "- [writable] profile: User profile PDA account"
+      ],
+      "accounts": [
+        {
+          "name": "profile",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "user",
+          "isMut": true,
+          "isSigner": true
+        }
+      ],
+      "args": []
+    }
+  ],
+  "accounts": [
+    {
+      "name": "userProfile",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "authority",
+            "type": "publicKey"
+          },
+          {
+            "name": "name",
+            "type": "string"
+          },
+          {
+            "name": "createdAt",
+            "type": "i64"
+          },
+          {
+            "name": "updatedAt",
+            "type": {
+              "option": "i64"
+            }
+          },
+          {
+            "name": "version",
+            "type": "u8"
+          },
+          {
+            "name": "bump",
+            "type": "u8"
+          }
+        ]
+      }
+    }
+  ],
+  "errors": [
+    {
+      "code": 6000,
+      "name": "NameTooLong",
+      "msg": "Name is too long. Maximum 32 characters allowed."
+    },
+    {
+      "code": 6001,
+      "name": "NameEmpty",
+      "msg": "Name cannot be empty."
+    },
+    {
+      "code": 6002,
+      "name": "Unauthorized",
+      "msg": "Unauthorized: You are not the authority of this profile."
+    }
+  ]
+};
