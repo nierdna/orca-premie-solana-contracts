@@ -404,29 +404,30 @@ export const streamPremarketWithExternalCheck = async () => {
     };
 
     // Start streaming
-    // await streamSolanaContinuous({
-    //     connection,
-    //     programId: TRADING_PROGRAM_ID,
-    //     initialLastSignature: undefined, // Start from latest
-    //     checkProcessedSignatures,
-    //     onTransaction,
-    //     saveLastSignature,
-    //     batchSize: 50,
-    //     sleepTime: 3000,
-    //     commitment: 'confirmed',
-    //     shouldContinue: () => true, // Run indefinitely
-    // });
-    const lastSignature = await streamSolanaSingleIteration({
+    await streamSolanaContinuous({
         connection,
         programId: TRADING_PROGRAM_ID,
+        initialLastSignature: undefined, // Start from latest
         checkProcessedSignatures,
         onTransaction,
-        batchSize: 1,
-        commitment: "confirmed",
+        saveLastSignature,
+        batchSize: 1000,
+        sleepTime: 30000,
+        commitment: 'confirmed',
+        shouldContinue: () => true, // Run indefinitely,
         program: tradingProgram,
     });
+    // const lastSignature = await streamSolanaSingleIteration({
+    //     connection,
+    //     programId: TRADING_PROGRAM_ID,
+    //     checkProcessedSignatures,
+    //     onTransaction,
+    //     batchSize: 1,
+    //     commitment: "confirmed",
+    //     program: tradingProgram,
+    // });
 
-    console.log("Last signature:", lastSignature);
+    // console.log("Last signature:", lastSignature);
 };
 
 
