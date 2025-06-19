@@ -1665,6 +1665,11 @@ export type PremarketTrade = {
           "name": "cancellationTime",
           "type": "i64",
           "index": false
+        },
+        {
+          "name": "collateralMint",
+          "type": "publicKey",
+          "index": false
         }
       ]
     },
@@ -3457,6 +3462,11 @@ export const IDL: PremarketTrade = {
         {
           "name": "cancellationTime",
           "type": "i64",
+          "index": false
+        },
+        {
+          "name": "collateralMint",
+          "type": "publicKey",
           "index": false
         }
       ]

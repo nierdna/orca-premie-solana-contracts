@@ -1665,6 +1665,11 @@
           "name": "cancellationTime",
           "type": "i64",
           "index": false
+        },
+        {
+          "name": "collateralMint",
+          "type": "publicKey",
+          "index": false
         }
       ]
     },

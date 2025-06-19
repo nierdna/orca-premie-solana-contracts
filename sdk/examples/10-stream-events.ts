@@ -419,7 +419,7 @@ export const streamPremarketWithExternalCheck = async () => {
         checkProcessedSignatures,
         onTransaction,
         saveLastSignature,
-        batchSize: 10,
+        batchSize: 5,
         sleepTime: 30000,
         commitment: 'confirmed',
         shouldContinue: () => true, // Run indefinitely,

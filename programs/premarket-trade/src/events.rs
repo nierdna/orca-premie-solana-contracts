@@ -107,6 +107,7 @@ pub struct TradeCancelled {
     pub seller: Pubkey,             // Seller wallet
     pub penalty_amount: u64,        // Penalty transferred from seller to buyer
     pub cancellation_time: i64,     // When cancellation occurred
+    pub collateral_mint: Pubkey,    // Collateral token mint address
 }
 
 /// Trading configuration updated

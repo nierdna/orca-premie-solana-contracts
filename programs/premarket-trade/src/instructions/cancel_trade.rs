@@ -203,6 +203,7 @@ pub fn handler(ctx: Context<CancelTrade>) -> Result<()> {
         seller: trade_record.seller,
         penalty_amount,
         cancellation_time: current_time,
+        collateral_mint: trade_record.collateral_mint,
     });
     
     msg!(

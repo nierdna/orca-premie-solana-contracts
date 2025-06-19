@@ -911,6 +911,7 @@ export class TradeCancelledEvent implements IBlockchainEvent {
     public readonly timestamp: number;
     public readonly sender: string;
     public readonly collateralDecimals?: number;
+    public readonly collateralMint: string;
 
     // Event-specific properties
     public readonly tradeId: string;
@@ -940,6 +941,8 @@ export class TradeCancelledEvent implements IBlockchainEvent {
         this.seller = this.validateAddressOrBase58(args.seller, 'seller');
         this.penaltyAmount = this.validateAmount(args.penaltyAmount, 'penaltyAmount');
         this.cancellationTime = Number(args.cancellationTime);
+        console.log('args.collateralMint', args.collateralMint);
+        this.collateralMint = this.validateAddressOrBase58(args.collateralMint, 'collateralMint');
     }
 
     private normalizeEventData(data: EventInput): RawEventData & { collateralDecimals?: number } {
@@ -955,6 +958,7 @@ export class TradeCancelledEvent implements IBlockchainEvent {
                 sender: solanaData.signature,
                 collateralDecimals: solanaData.collateralDecimals,
                 args: {
+                    ...solanaArgs,
                     tradeId: solanaArgs.tradeId,
                     tokenId: solanaArgs.tokenId,
                     buyer: solanaArgs.buyer,
@@ -1007,7 +1011,8 @@ export class TradeCancelledEvent implements IBlockchainEvent {
                 buyer: this.buyer,
                 seller: this.seller,
                 penaltyAmount: this.penaltyAmount,
-                cancellationTime: this.cancellationTime
+                cancellationTime: this.cancellationTime,
+                collateralMint: this.collateralMint
             }
         };
     }

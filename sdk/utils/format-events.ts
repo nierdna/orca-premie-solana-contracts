@@ -224,7 +224,18 @@ async function formatOrderCancelledEvent(event: any, data: any, connection: Conn
  */
 async function formatTradeCancelledEvent(event: any, data: any, connection: Connection) {
     // Default to USDC decimals
-    const decimals = 6;
+    let decimals = 6;
+
+    // Try to get decimals from targetMint if available
+    if (data.collateralMint) {
+        try {
+            const collateralMint = new PublicKey(data.collateralMint);
+            const mintInfo = await getCachedMintInfo(connection, collateralMint);
+            decimals = mintInfo.decimals;
+        } catch (error) {
+            console.warn(`${LOG_PREFIXES.DEBUG} Could not get mint info for collateralMint:`, error);
+        }
+    }
 
     const formattedData = {
         ...data,
