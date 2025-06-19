@@ -46,7 +46,7 @@ pub struct RelayerRemoved {
     pub timestamp: i64,             // When relayer was removed
 }
 
-/// Orders matched and trade created (Core business logic)
+/// Orders matched and trade created (Enhanced with order hashes - Hex format)
 #[event]
 pub struct OrdersMatched {
     pub trade_id: Pubkey,           // Account address as trade ID (EVM compatible naming)
@@ -58,6 +58,8 @@ pub struct OrdersMatched {
     pub buyer_collateral: u64,      // Buyer collateral locked
     pub seller_collateral: u64,     // Seller collateral locked
     pub match_time: i64,            // When trade was matched
+    pub buy_order_hash: String,     // Buy order hash (hex format) - human readable
+    pub sell_order_hash: String,    // Sell order hash (hex format) - human readable
 }
 
 /// Order placed

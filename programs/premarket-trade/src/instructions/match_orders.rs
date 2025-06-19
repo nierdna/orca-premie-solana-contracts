@@ -172,6 +172,14 @@ pub fn handler(
     // Lock seller collateral via CPI to vault  
     lock_seller_collateral_cpi(&ctx, seller_collateral)?;
     
+    // 🔑 Calculate order hashes for tracking and audit trail
+    let buy_order_hash_bytes = crate::utils::calculate_order_hash(&buy_order);
+    let sell_order_hash_bytes = crate::utils::calculate_order_hash(&sell_order);
+    
+    // Convert to human-readable hex format
+    let buy_order_hash = hex::encode(buy_order_hash_bytes);
+    let sell_order_hash = hex::encode(sell_order_hash_bytes);
+    
     // Initialize TradeRecord
     let trade_record = &mut ctx.accounts.trade_record;
     let match_time = Clock::get()?.unix_timestamp;
@@ -189,7 +197,7 @@ pub fn handler(
     trade_record.settled = false;
     // trade_record.target_mint = None;
     
-    // Emit OrdersMatched event
+    // Emit enhanced OrdersMatched event with order hashes
     emit!(OrdersMatched {
         trade_id: trade_record.trade_id,
         buyer: trade_record.buyer,
@@ -200,16 +208,21 @@ pub fn handler(
         buyer_collateral,
         seller_collateral,
         match_time,
+        // 🆕 Order hashes for tracking and audit
+        buy_order_hash: buy_order_hash.clone(),
+        sell_order_hash: sell_order_hash.clone(),
     });
     
     msg!(
-        "🎯 Orders matched by relayer: {} - trade_id: {} - buyer: {} - seller: {} - amount: {} - price: {}",
+        "🎯 Orders matched by relayer: {} - trade_id: {} - buyer: {} - seller: {} - amount: {} - price: {} - buy_hash: {} - sell_hash: {}",
         ctx.accounts.relayer.key(),
         trade_record.trade_id,
         trade_record.buyer,
         trade_record.seller,
         actual_fill_amount,
-        buy_order.price
+        buy_order.price,
+        buy_order_hash,
+        sell_order_hash
     );
     
     Ok(())

@@ -1495,6 +1495,16 @@
           "name": "matchTime",
           "type": "i64",
           "index": false
+        },
+        {
+          "name": "buyOrderHash",
+          "type": "string",
+          "index": false
+        },
+        {
+          "name": "sellOrderHash",
+          "type": "string",
+          "index": false
         }
       ]
     },
