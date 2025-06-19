@@ -1,196 +1,18 @@
 import {
     Connection,
     PublicKey,
-    ConfirmedSignatureInfo,
-    ParsedTransactionWithMeta,
 } from "@solana/web3.js";
-import { Program, Provider, EventParser, BorshCoder } from "@coral-xyz/anchor";
-import { getMint } from "@solana/spl-token";
+import { Program } from "@coral-xyz/anchor";
 import tradingProgramIdl from "../idl/premarket_trade.json";
 import "dotenv/config";
 import { OrderMatchedEvent } from "../types/events";
-
-// Log prefixes for consistent logging
-const LOG_PREFIXES = {
-    INFO: "[INFO]",
-    EVENT: "[EVENT]",
-    SLOT: "[SLOT]",
-    DEBUG: "[DEBUG]",
-    ERROR: "[ERROR]",
-    SAVE: "[SAVE]",
-} as const;
+import { LOG_PREFIXES } from "../utils/logs";
+import { formatEvent } from "../utils/format-events";
+import { ClientProvider } from "../utils/client-provider";
+import { parseTransactionFromParsedTx } from "../utils/parse-transaction";
 
 // Sleep utility
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
-
-// Cache for mint info to reduce API calls
-const mintInfoCache = new Map<string, { decimals: number; cachedAt: number }>();
-const CACHE_TTL = 60 * 60 * 1000; // 1 hour in milliseconds
-
-/**
- * Get mint info with caching to reduce API calls
- * Cache mint decimals info since it rarely changes
- */
-const getCachedMintInfo = async (
-    connection: Connection,
-    mintAddress: PublicKey
-): Promise<{ decimals: number }> => {
-    const mintKey = mintAddress.toString();
-    const now = Date.now();
-
-    // Check if we have cached data that's still valid
-    const cached = mintInfoCache.get(mintKey);
-    if (cached && now - cached.cachedAt < CACHE_TTL) {
-        return { decimals: cached.decimals };
-    }
-
-    try {
-        // Fetch fresh mint info from Solana
-        const mintInfo = await getMint(connection, mintAddress);
-
-        // Cache the result
-        mintInfoCache.set(mintKey, {
-            decimals: mintInfo.decimals,
-            cachedAt: now,
-        });
-
-        return { decimals: mintInfo.decimals };
-    } catch (error) {
-        console.error(
-            `${LOG_PREFIXES.ERROR} Failed to get mint info for ${mintKey}:`,
-            error
-        );
-
-        // If we have stale cached data, use it as fallback
-        if (cached) {
-            console.log(`${LOG_PREFIXES.DEBUG} Using stale cache for ${mintKey}`);
-            return { decimals: cached.decimals };
-        }
-
-        // Default to 6 decimals if all else fails (common for USDC-like tokens)
-        console.log(
-            `${LOG_PREFIXES.DEBUG} Using default 6 decimals for ${mintKey}`
-        );
-        return { decimals: 6 };
-    }
-};
-
-/**
- * Clear mint info cache (useful for testing or manual cache invalidation)
- */
-export const clearMintCache = () => {
-    mintInfoCache.clear();
-    console.log(`${LOG_PREFIXES.INFO} Mint info cache cleared`);
-};
-
-/**
- * Get cache stats for monitoring
- */
-export const getMintCacheStats = () => {
-    return {
-        size: mintInfoCache.size,
-        entries: Array.from(mintInfoCache.entries()).map(([mint, info]) => ({
-            mint,
-            decimals: info.decimals,
-            cachedAt: new Date(info.cachedAt).toISOString(),
-            ageMinutes: Math.round((Date.now() - info.cachedAt) / (1000 * 60)),
-        })),
-    };
-};
-
-/**
- * Helper function to parse transaction and extract program events from parsed transaction using EventParser
- */
-export const parseTransactionFromParsedTx = (
-    parsedTx: ParsedTransactionWithMeta,
-    signatureInfo: ConfirmedSignatureInfo,
-    program?: Program<any> // Optional Anchor program for IDL parsing
-): any => {
-    if (!parsedTx || !parsedTx.meta || !parsedTx.meta.logMessages) return null;
-
-    // Method 1: Use EventParser (best practice approach)
-    if (program) {
-        const eventParser = new EventParser(
-            program.programId,
-            new BorshCoder(program.idl)
-        );
-
-        const eventsData: any[] = [];
-        try {
-            // parseLogs returns a generator
-            // @ts-ignore - EventParser types issue
-            for (const event of eventParser.parseLogs(parsedTx.meta.logMessages)) {
-                eventsData.push({
-                    ...event,
-                    signature: signatureInfo.signature,
-                    slot: parsedTx.slot,
-                    blockTime: parsedTx.blockTime,
-                    txHash: parsedTx.transaction.signatures[0],
-                });
-            }
-
-            if (eventsData.length > 0) {
-                return eventsData;
-            }
-        } catch (error) {
-            console.log(`EventParser failed for ${signatureInfo.signature}:`, error);
-            // Continue to fallback parsing
-        }
-    }
-};
-
-/**
- * Helper function to parse transaction and extract program events using EventParser
- */
-export const parseTransactionForEvents = async (
-    connection: Connection,
-    signature: string,
-    program?: Program<any> // Optional Anchor program for IDL parsing
-): Promise<any[]> => {
-    const tx = await connection.getParsedTransaction(signature, {
-        maxSupportedTransactionVersion: 0,
-    });
-
-    console.log("   ✅ tx", tx);
-
-    if (!tx || !tx.meta || !tx.meta.logMessages) return [];
-
-    // Method 1: Use EventParser (best practice approach)
-    if (program) {
-        const eventParser = new EventParser(
-            program.programId,
-            new BorshCoder(program.idl)
-        );
-
-        console.log("   ✅ eventParser", eventParser);
-
-        const eventsData: any[] = [];
-        try {
-            // parseLogs returns a generator
-            // @ts-ignore - EventParser types issue
-            for (const event of eventParser.parseLogs(tx.meta.logMessages)) {
-                eventsData.push({
-                    ...event,
-                    signature,
-                    slot: tx.slot,
-                    blockTime: tx.blockTime,
-                    tx_hash: tx.transaction.signatures[0],
-                    source: "eventparser",
-                });
-            }
-
-            if (eventsData.length > 0) {
-                console.log("   ✅", eventsData);
-                return eventsData;
-            }
-        } catch (error) {
-            console.log(`EventParser failed for ${signature}:`, error);
-            // Continue to fallback parsing
-        }
-    }
-
-    return [];
-};
 
 /**
  * Single-iteration streaming with external processed signatures check
@@ -531,13 +353,6 @@ export const streamSolanaContinuous = async <TFormattedEvent>({
     }
 };
 
-class ClientProvider implements Provider {
-    connection: Connection;
-    constructor(connection: Connection) {
-        this.connection = connection;
-    }
-}
-
 /**
  * Example usage for premarket trading
  */
@@ -614,86 +429,7 @@ export const streamPremarketWithExternalCheck = async () => {
     console.log("Last signature:", lastSignature);
 };
 
-/**
- * Format event data with proper decimal conversion
- * Dùng SPL token để lấy decimals của collateralMint
- */
-export const formatEvent = async (event: any, connection: Connection) => {
-    try {
-        // If event doesn't have data or required fields, return original
-        if (
-            !event.data ||
-            !event.data.collateralMint ||
-            event.name !== "OrdersMatched"
-        ) {
-            return {
-                ...event,
-                signature: event.signature,
-                slot: event.slot,
-            };
-        }
 
-        const data = {
-            ...event.data,
-            tokenId: event.data.tokenId.toString(),
-            tradeId: event.data.tradeId.toString(),
-            buyOrderHash: event.data.buyOrderHash.toString(),
-            sellOrderHash: event.data.sellOrderHash.toString(),
-            targetTokenId: event.data.tokenId.toString(),
-            collateralMint: event.data.collateralMint.toString(),
-            buyer: event.data.buyer.toString(),
-            seller: event.data.seller.toString(),
-        };
-
-        // Get collateral mint info to determine decimals (with caching)
-        const collateralMintPubkey = new PublicKey(data.collateralMint);
-        const mintInfo = await getCachedMintInfo(connection, collateralMintPubkey);
-        const decimals = mintInfo.decimals;
-
-        // Parse hex values to numbers and format according to requirements
-        const formattedData = {
-            ...data,
-            // price = price.toNumber() / 10 ** 6
-            price: data.price ? data.price.toNumber() / Math.pow(10, 6) : data.price,
-
-            // filledAmount = filledAmount.toNumber() / 10 ** 6
-            filledAmount: data.filledAmount
-                ? data.filledAmount.toNumber() / Math.pow(10, 6)
-                : data.filledAmount,
-
-            // buyerCollateral = buyerCollateral.toNumber() / 10 ** decimals
-            buyerCollateral: data.buyerCollateral
-                ? data.buyerCollateral.toNumber() / Math.pow(10, decimals)
-                : data.buyerCollateral,
-
-            // sellerCollateral = sellerCollateral.toNumber() / 10 ** decimals
-            sellerCollateral: data.sellerCollateral
-                ? data.sellerCollateral.toNumber() / Math.pow(10, decimals)
-                : data.sellerCollateral,
-
-            // matchTime = matchTime.toNumber()
-            matchTime: data.matchTime ? data.matchTime.toNumber() : data.matchTime,
-        };
-
-        return {
-            ...event,
-            data: formattedData,
-            signature: event.signature,
-            slot: event.slot,
-            // Add decimals info for reference
-            collateralDecimals: decimals,
-        };
-    } catch (error) {
-        console.error(`${LOG_PREFIXES.ERROR} Error formatting event:`, error);
-        // Return original event if formatting fails
-        return {
-            ...event,
-            signature: event.signature,
-            slot: event.slot,
-            formatError: error instanceof Error ? error.message : "Unknown error",
-        };
-    }
-};
 
 if (require.main === module) {
     streamPremarketWithExternalCheck()
