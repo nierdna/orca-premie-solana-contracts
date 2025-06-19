@@ -54,8 +54,6 @@ export const parseTransactionForEvents = async (
         maxSupportedTransactionVersion: 0,
     });
 
-    console.log("   ✅ tx", tx);
-
     if (!tx || !tx.meta || !tx.meta.logMessages) return [];
 
     // Method 1: Use EventParser (best practice approach)
@@ -64,8 +62,6 @@ export const parseTransactionForEvents = async (
             program.programId,
             new BorshCoder(program.idl)
         );
-
-        console.log("   ✅ eventParser", eventParser);
 
         const eventsData: any[] = [];
         try {
@@ -78,12 +74,10 @@ export const parseTransactionForEvents = async (
                     slot: tx.slot,
                     blockTime: tx.blockTime,
                     tx_hash: tx.transaction.signatures[0],
-                    source: "eventparser",
                 });
             }
 
             if (eventsData.length > 0) {
-                console.log("   ✅", eventsData);
                 return eventsData;
             }
         } catch (error) {
