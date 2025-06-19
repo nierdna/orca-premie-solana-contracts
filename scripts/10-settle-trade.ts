@@ -14,6 +14,7 @@ import {
     Transaction,
     TransactionInstruction,
     SYSVAR_INSTRUCTIONS_PUBKEY,
+    ComputeBudgetProgram,
 } from "@solana/web3.js";
 import {
     getAssociatedTokenAddressSync,
@@ -124,10 +125,14 @@ async function settleTrade(): Promise<void> {
         try {
             const idlPath = `target/idl/premarket_trade.json`;
             if (fs.existsSync(idlPath)) {
+                console.log(`🔍 Loading trading program IDL from ${idlPath}`);
                 const idl = JSON.parse(fs.readFileSync(idlPath, 'utf8'));
                 tradingProgram = new anchor.Program(idl, tradingProgramId, provider);
+                console.log(`✅ Trading program loaded successfully`);
             } else {
+                console.log(`🔍 Loading trading program IDL from ${idlPath}`);
                 tradingProgram = await anchor.Program.at(tradingProgramId, provider);
+                console.log(`✅ Trading program loaded successfully`);
             }
         } catch (error) {
             console.error("❌ Failed to load trading program IDL:", error);
@@ -135,6 +140,7 @@ async function settleTrade(): Promise<void> {
         }
 
         // Fetch trade record to get required information
+        console.log(`🔍 Fetching trade record from ${tradeRecordAddress.toString()}`);
         const tradeRecord = await tradingProgram.account.tradeRecord.fetch(tradeRecordAddress) as any;
         console.log(`📊 Trade Info:`);
         console.log(`  Trade ID: ${tradeRecord.tradeId.toString()}`);
@@ -241,7 +247,7 @@ async function settleTrade(): Promise<void> {
         // Create and send transaction
         console.log(`📦 Creating transaction with ${instructions.length} instruction(s)...`);
         const transaction = new Transaction();
-        transaction.add(...instructions);
+        transaction.add(...instructions).add(ComputeBudgetProgram.setComputeUnitLimit({ units: 1000000 }));
 
         // Send transaction
         const tx = await provider.sendAndConfirm(transaction, [sellTrader], {

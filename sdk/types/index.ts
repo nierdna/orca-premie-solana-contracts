@@ -211,4 +211,34 @@ export interface EconomicConfig {
 export interface TechnicalConfig {
     minSettleTime: number;
     maxSettleTime: number;
-} 
+}
+
+// ===== Event Types =====
+// Export all event types and classes
+export {
+    // Event input types
+    RawEventData,
+    SolanaEventData,
+    EventInput,
+
+    // Event args interfaces
+    OrdersMatchedArgs,
+    SolanaOrdersMatchedArgs,
+    SolanaTokenMarketCreatedArgs,
+    SolanaTokenMappedArgs,
+    SolanaTradeSettledArgs,
+    SolanaOrderCancelledArgs,
+    SolanaTradeCancelledArgs,
+    OrderPartiallyFilledArgs,
+
+    // Base interface
+    IBlockchainEvent,
+
+    // Event classes
+    OrderMatchedEvent,
+    TokenMarketCreatedEvent,
+    TokenMappedEvent,
+    TradeSettledEvent,
+    OrderCancelledEvent,
+    TradeCancelledEvent,
+} from './events'; 

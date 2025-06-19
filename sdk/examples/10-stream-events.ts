@@ -5,11 +5,11 @@ import {
 import { Program } from "@coral-xyz/anchor";
 import tradingProgramIdl from "../idl/premarket_trade.json";
 import "dotenv/config";
-import { OrderMatchedEvent } from "../types/events";
 import { LOG_PREFIXES } from "../utils/logs";
 import { formatEvent } from "../utils/format-events";
 import { ClientProvider } from "../utils/client-provider";
 import { parseTransactionFromParsedTx } from "../utils/parse-transaction";
+import { createEventFromData } from "../utils/event-factory";
 
 // Sleep utility
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -391,10 +391,18 @@ export const streamPremarketWithExternalCheck = async () => {
 
         // Format the event with proper decimals
         const formattedTransaction = await formatEvent(transaction, connection);
-        const event = new OrderMatchedEvent(formattedTransaction);
+
+        // Create appropriate event object using centralized factory
+        const eventObj = createEventFromData(formattedTransaction);
+
         console.log(
-            `   🔄 Formatted transaction: ${JSON.stringify(event, null, 2)}`
+            `   🔄 Formatted event: ${JSON.stringify(eventObj, null, 2)}`
         );
+
+        // Log event-specific info
+        if (eventObj.toString) {
+            console.log(`   📋 Event summary: ${eventObj.toString()}`);
+        }
     };
 
     // Example save function
@@ -411,7 +419,7 @@ export const streamPremarketWithExternalCheck = async () => {
         checkProcessedSignatures,
         onTransaction,
         saveLastSignature,
-        batchSize: 1000,
+        batchSize: 10,
         sleepTime: 30000,
         commitment: 'confirmed',
         shouldContinue: () => true, // Run indefinitely,
