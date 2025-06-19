@@ -125,7 +125,6 @@ export const parseTransactionForEvents = async (
  * @param programId Program ID to monitor
  * @param lastSignatureProcessed Signature đã processed lần trước (dùng làm until cursor)
  * @param checkProcessedSignatures External function để check signatures đã processed
- * @param parseTransaction Function to parse transaction data
  * @param onTransaction Callback for each new transaction
  * @param batchSize Number of signatures to fetch (max 1000)
  * @param commitment Commitment level
@@ -136,7 +135,6 @@ export const streamSolanaSingleIteration = async <TFormattedEvent>({
     programId,
     lastSignatureProcessed,
     checkProcessedSignatures,
-    parseTransaction,
     onTransaction,
     batchSize = 100,
     commitment = 'confirmed',
@@ -145,8 +143,7 @@ export const streamSolanaSingleIteration = async <TFormattedEvent>({
     connection: Connection;
     programId: PublicKey;
     lastSignatureProcessed?: string;
-    checkProcessedSignatures: (signatures: string[]) => Promise<string[]> | string[];
-    parseTransaction: (signature: ConfirmedSignatureInfo) => Promise<TFormattedEvent | null> | TFormattedEvent | null;
+        checkProcessedSignatures: (signatures: string[]) => Promise<string[]> | string[];
     onTransaction: (event: TFormattedEvent) => Promise<void>;
     batchSize?: number;
     commitment?: 'processed' | 'confirmed' | 'finalized';
@@ -290,22 +287,7 @@ export const streamSolanaSingleIteration = async <TFormattedEvent>({
                 console.log(`${LOG_PREFIXES.DEBUG} Falling back to individual transaction processing`);
             }
 
-            for (const signature of orderedSignatures) {
-                try {
-                    const formattedEvent = await parseTransaction(signature);
 
-                    if (formattedEvent) {
-                        await onTransaction(formattedEvent);
-                        processedCount++;
-                    }
-
-                    latestProcessedSignature = signature.signature;
-
-                } catch (error) {
-                    console.error(`${LOG_PREFIXES.ERROR} Error processing signature ${signature.signature}:`, error);
-                    latestProcessedSignature = signature.signature;
-                }
-            }
         }
 
         if (debugEnabled) {
@@ -339,7 +321,6 @@ export const streamSolanaContinuous = async <TFormattedEvent>({
     programId,
     initialLastSignature,
     checkProcessedSignatures,
-    parseTransaction,
     onTransaction,
     saveLastSignature,
     batchSize = 100,
@@ -351,8 +332,7 @@ export const streamSolanaContinuous = async <TFormattedEvent>({
     connection: Connection;
     programId: PublicKey;
     initialLastSignature?: string;
-    checkProcessedSignatures: (signatures: string[]) => Promise<string[]> | string[];
-    parseTransaction: (signature: ConfirmedSignatureInfo) => Promise<TFormattedEvent | null> | TFormattedEvent | null;
+        checkProcessedSignatures: (signatures: string[]) => Promise<string[]> | string[];
     onTransaction: (event: TFormattedEvent) => Promise<void>;
     saveLastSignature: (signature: string) => Promise<void>;
     batchSize?: number;
@@ -388,7 +368,6 @@ export const streamSolanaContinuous = async <TFormattedEvent>({
                 programId,
                 lastSignatureProcessed,
                 checkProcessedSignatures,
-                parseTransaction,
                 onTransaction,
                 batchSize,
                 commitment,
@@ -446,18 +425,6 @@ export const streamPremarketWithExternalCheck = async () => {
 
     const tradingProgram = new Program(tradingProgramIdl as any, TRADING_PROGRAM_ID, new ClientProvider(connection));
 
-    // Example parse transaction function
-    const parseTransaction = async (signature: ConfirmedSignatureInfo) => {
-        const events = await parseTransactionForEvents(connection, signature.signature, tradingProgram);
-
-        return events.length > 0 ? {
-            signature: signature.signature,
-            slot: signature.slot,
-            blockTime: signature.blockTime,
-            events,
-        } : null;
-    };
-
     // Example onTransaction callback
     const onTransaction = async (transaction: any) => {
         console.log(`   ✅ Found transaction: ${JSON.stringify(transaction, null, 2)}`);
@@ -475,7 +442,6 @@ export const streamPremarketWithExternalCheck = async () => {
     //     programId: TRADING_PROGRAM_ID,
     //     initialLastSignature: undefined, // Start from latest
     //     checkProcessedSignatures,
-    //     parseTransaction,
     //     onTransaction,
     //     saveLastSignature,
     //     batchSize: 50,
@@ -487,7 +453,6 @@ export const streamPremarketWithExternalCheck = async () => {
         connection,
         programId: TRADING_PROGRAM_ID,
         checkProcessedSignatures,
-        parseTransaction,
         onTransaction,
         batchSize: 1,
         commitment: 'confirmed',
