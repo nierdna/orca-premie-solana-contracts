@@ -28,6 +28,7 @@
   "dependencies": {
     "@coral-xyz/anchor": "^0.29.0",
     "@noble/curves": "^1.9.2",
+    "@noble/hashes": "^1.8.0",
     "@solana/spl-token": "^0.4.13",
     "@solana/web3.js": "^1.87.6",
     "@types/dotenv": "^8.2.3",

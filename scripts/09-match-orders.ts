@@ -18,10 +18,8 @@ import dotenv from "dotenv";
 import { getVaultConfigPDA } from "./01-initialize-vault";
 import { getAssociatedTokenAddress, TOKEN_PROGRAM_ID } from "@solana/spl-token";
 import { getVaultAuthorityPDA } from "./03-deposit-collateral";
-import { Program } from "@coral-xyz/anchor";
-import { PremarketTrade } from "../target/types/premarket_trade";
-import { EscrowVault } from "../target/types/escrow_vault";
-import { ASSOCIATED_TOKEN_PROGRAM_ID } from "@solana/spl-token";
+import { PreOrder } from "../sdk";
+import { calculateOrderHash, hashToHex, createOrderMessage } from "./utils/order-hash";
 
 // Load environment variables
 dotenv.config();
@@ -159,7 +157,7 @@ async function matchOrders(): Promise<void> {
         }
 
         // Create PreOrder objects
-        const buyOrder = {
+        const buyOrder: PreOrder = {
             trader: buyTrader.publicKey,
             collateralToken: collateralMint,
             tokenId: tokenMarketAddress, // TokenMarket address as token_id
@@ -170,7 +168,7 @@ async function matchOrders(): Promise<void> {
             deadline: new anchor.BN(deadline),
         };
 
-        const sellOrder = {
+        const sellOrder: PreOrder = {
             trader: sellTrader.publicKey,
             collateralToken: collateralMint,
             tokenId: tokenMarketAddress, // TokenMarket address as token_id
@@ -181,8 +179,15 @@ async function matchOrders(): Promise<void> {
             deadline: new anchor.BN(deadline),
         };
 
-        // No need to sign orders in relayer-authorized model
+        // Calculate order hashes for tracking and audit trail
+        const buyOrderHashBytes = calculateOrderHash(buyOrder as any);
+        const sellOrderHashBytes = calculateOrderHash(sellOrder as any);
+        const buyOrderHash = hashToHex(buyOrderHashBytes);
+        const sellOrderHash = hashToHex(sellOrderHashBytes);
+
         console.log("🔐 Relayer-authorized matching model - no signatures needed");
+        console.log(`📋 Buy Order Hash: ${buyOrderHash}`);
+        console.log(`📋 Sell Order Hash: ${sellOrderHash}`);
 
         // Get PDAs
         const [tradeConfigPDA] = getTradeConfigPDA(tradingProgramId);
@@ -281,4 +286,14 @@ if (require.main === module) {
         });
 }
 
-export { matchOrders, loadKeypairFromFile, getTradeConfigPDA, getOrderStatusPDA, getUserBalancePDA }; 
+export {
+    matchOrders,
+    loadKeypairFromFile,
+    getTradeConfigPDA,
+    getOrderStatusPDA,
+    getUserBalancePDA,
+    calculateOrderHash,
+    createOrderMessage,
+    hashToHex,
+    type PreOrder
+}; 
