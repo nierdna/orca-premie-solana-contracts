@@ -203,6 +203,7 @@ pub fn handler(
         buyer: trade_record.buyer,
         seller: trade_record.seller,
         token_id: trade_record.token_id,
+        collateral_mint: trade_record.collateral_mint,
         filled_amount: actual_fill_amount,
         price: buy_order.price,
         buyer_collateral,

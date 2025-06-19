@@ -1472,6 +1472,11 @@ export type PremarketTrade = {
           "index": false
         },
         {
+          "name": "collateralMint",
+          "type": "publicKey",
+          "index": false
+        },
+        {
           "name": "filledAmount",
           "type": "u64",
           "index": false
@@ -1494,6 +1499,16 @@ export type PremarketTrade = {
         {
           "name": "matchTime",
           "type": "i64",
+          "index": false
+        },
+        {
+          "name": "buyOrderHash",
+          "type": "string",
+          "index": false
+        },
+        {
+          "name": "sellOrderHash",
+          "type": "string",
           "index": false
         }
       ]
@@ -3250,6 +3265,11 @@ export const IDL: PremarketTrade = {
           "index": false
         },
         {
+          "name": "collateralMint",
+          "type": "publicKey",
+          "index": false
+        },
+        {
           "name": "filledAmount",
           "type": "u64",
           "index": false
@@ -3272,6 +3292,16 @@ export const IDL: PremarketTrade = {
         {
           "name": "matchTime",
           "type": "i64",
+          "index": false
+        },
+        {
+          "name": "buyOrderHash",
+          "type": "string",
+          "index": false
+        },
+        {
+          "name": "sellOrderHash",
+          "type": "string",
           "index": false
         }
       ]

@@ -53,6 +53,7 @@ pub struct OrdersMatched {
     pub buyer: Pubkey,              // Buyer wallet
     pub seller: Pubkey,             // Seller wallet
     pub token_id: Pubkey,           // Account address as token ID (EVM compatible naming)
+    pub collateral_mint: Pubkey,    // Collateral token mint address
     pub filled_amount: u64,         // Amount filled
     pub price: u64,                 // Price per token (6 decimals)
     pub buyer_collateral: u64,      // Buyer collateral locked

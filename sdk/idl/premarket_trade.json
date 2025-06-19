@@ -1472,6 +1472,11 @@
           "index": false
         },
         {
+          "name": "collateralMint",
+          "type": "publicKey",
+          "index": false
+        },
+        {
           "name": "filledAmount",
           "type": "u64",
           "index": false

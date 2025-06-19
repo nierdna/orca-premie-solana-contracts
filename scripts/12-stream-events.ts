@@ -1,5 +1,6 @@
 import { Connection, PublicKey, ConfirmedSignatureInfo, ParsedTransactionWithMeta } from '@solana/web3.js';
 import { Program, Provider, EventParser, BorshCoder } from '@coral-xyz/anchor';
+import { getMint } from '@solana/spl-token';
 import tradingProgramIdl from '../target/idl/premarket_trade.json';
 import 'dotenv/config';
 
@@ -16,6 +17,73 @@ const LOG_PREFIXES = {
 
 // Sleep utility
 const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+
+// Cache for mint info to reduce API calls
+const mintInfoCache = new Map<string, { decimals: number; cachedAt: number }>();
+const CACHE_TTL = 60 * 60 * 1000; // 1 hour in milliseconds
+
+/**
+ * Get mint info with caching to reduce API calls
+ * Cache mint decimals info since it rarely changes
+ */
+const getCachedMintInfo = async (connection: Connection, mintAddress: PublicKey): Promise<{ decimals: number }> => {
+    const mintKey = mintAddress.toString();
+    const now = Date.now();
+
+    // Check if we have cached data that's still valid
+    const cached = mintInfoCache.get(mintKey);
+    if (cached && (now - cached.cachedAt) < CACHE_TTL) {
+        return { decimals: cached.decimals };
+    }
+
+    try {
+        // Fetch fresh mint info from Solana
+        const mintInfo = await getMint(connection, mintAddress);
+
+        // Cache the result
+        mintInfoCache.set(mintKey, {
+            decimals: mintInfo.decimals,
+            cachedAt: now
+        });
+
+        return { decimals: mintInfo.decimals };
+    } catch (error) {
+        console.error(`${LOG_PREFIXES.ERROR} Failed to get mint info for ${mintKey}:`, error);
+
+        // If we have stale cached data, use it as fallback
+        if (cached) {
+            console.log(`${LOG_PREFIXES.DEBUG} Using stale cache for ${mintKey}`);
+            return { decimals: cached.decimals };
+        }
+
+        // Default to 6 decimals if all else fails (common for USDC-like tokens)
+        console.log(`${LOG_PREFIXES.DEBUG} Using default 6 decimals for ${mintKey}`);
+        return { decimals: 6 };
+    }
+};
+
+/**
+ * Clear mint info cache (useful for testing or manual cache invalidation)
+ */
+export const clearMintCache = () => {
+    mintInfoCache.clear();
+    console.log(`${LOG_PREFIXES.INFO} Mint info cache cleared`);
+};
+
+/**
+ * Get cache stats for monitoring
+ */
+export const getMintCacheStats = () => {
+    return {
+        size: mintInfoCache.size,
+        entries: Array.from(mintInfoCache.entries()).map(([mint, info]) => ({
+            mint,
+            decimals: info.decimals,
+            cachedAt: new Date(info.cachedAt).toISOString(),
+            ageMinutes: Math.round((Date.now() - info.cachedAt) / (1000 * 60))
+        }))
+    };
+};
 
 /**
  * Helper function to parse transaction and extract program events from parsed transaction using EventParser
@@ -428,6 +496,10 @@ export const streamPremarketWithExternalCheck = async () => {
     // Example onTransaction callback
     const onTransaction = async (transaction: any) => {
         console.log(`   ✅ Found transaction: ${JSON.stringify(transaction, null, 2)}`);
+
+        // Format the event with proper decimals
+        const formattedTransaction = await formatEvent(transaction, connection);
+        console.log(`   🔄 Formatted transaction: ${JSON.stringify(formattedTransaction, null, 2)}`);
     };
 
     // Example save function
@@ -461,6 +533,68 @@ export const streamPremarketWithExternalCheck = async () => {
 
     console.log('Last signature:', lastSignature);
 };
+
+/**
+ * Format event data with proper decimal conversion
+ * Dùng SPL token để lấy decimals của collateralMint
+ */
+export const formatEvent = async (event: any, connection: Connection) => {
+    try {
+        // If event doesn't have data or required fields, return original
+        if (!event.data || !event.data.collateralMint) {
+            return {
+                ...event,
+                signature: event.signature,
+                slot: event.slot,
+            };
+        }
+
+        const data = event.data;
+
+        // Get collateral mint info to determine decimals (with caching)
+        const collateralMintPubkey = new PublicKey(data.collateralMint);
+        const mintInfo = await getCachedMintInfo(connection, collateralMintPubkey);
+        const decimals = mintInfo.decimals;
+
+        // Parse hex values to numbers and format according to requirements
+        const formattedData = {
+            ...data,
+            // price = price.toNumber() / 10 ** 6
+            price: data.price ? parseInt(data.price, 16) / Math.pow(10, 6) : data.price,
+
+            // filledAmount = filledAmount.toNumber() / 10 ** 6  
+            filledAmount: data.filledAmount ? parseInt(data.filledAmount, 16) / Math.pow(10, 6) : data.filledAmount,
+
+            // buyerCollateral = buyerCollateral.toNumber() / 10 ** decimals
+            buyerCollateral: data.buyerCollateral ? parseInt(data.buyerCollateral, 16) / Math.pow(10, decimals) : data.buyerCollateral,
+
+            // sellerCollateral = sellerCollateral.toNumber() / 10 ** decimals
+            sellerCollateral: data.sellerCollateral ? parseInt(data.sellerCollateral, 16) / Math.pow(10, decimals) : data.sellerCollateral,
+
+            // matchTime = matchTime.toNumber()
+            matchTime: data.matchTime ? parseInt(data.matchTime, 16) : data.matchTime,
+        };
+
+        return {
+            ...event,
+            data: formattedData,
+            signature: event.signature,
+            slot: event.slot,
+            // Add decimals info for reference
+            collateralDecimals: decimals,
+        };
+
+    } catch (error) {
+        console.error(`${LOG_PREFIXES.ERROR} Error formatting event:`, error);
+        // Return original event if formatting fails
+        return {
+            ...event,
+            signature: event.signature,
+            slot: event.slot,
+            formatError: error instanceof Error ? error.message : 'Unknown error',
+        };
+    }
+}
 
 
 if (require.main === module) {
